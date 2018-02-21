@@ -42,6 +42,7 @@ go build
 Una vez compilado el proyecto ya podremos ejecutar la aplicación con NW.js pasandole al ejecutable del mismo la carpeta raíz del proyecto, por ejemplo:
 
 (si se han seguido los pasos de prerrequisitos exactamente, tendremos una carpeta llamada nwjs dentro de la carpeta raíz del proyecto)
+
 Windows:
 ```
 .\nwjs\nw.exe .
