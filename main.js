@@ -10,9 +10,25 @@ function setPage(html){
     if (elem!=null){
         elem.focus();
     }
+    
+    $('#login-form-link').click(function(e) {
+        $("#login-form").delay(100).fadeIn(100);
+        $("#register-form").fadeOut(100);
+        $('#register-form-link').removeClass('active');
+        $(this).addClass('active');
+        e.preventDefault();
+    });
+    $('#register-form-link').click(function(e) {
+        $("#register-form").delay(100).fadeIn(100);
+        $("#login-form").fadeOut(100);
+        $('#login-form-link').removeClass('active');
+        $(this).addClass('active');
+        e.preventDefault();
+    });
 }
 
 function body_message(msg){    
+    //require('nw.gui').Window.get().showDevTools();
     setPage('<h1>'+msg+'</h1>');
 }
 
@@ -49,13 +65,13 @@ function start_process() {
 
 function restart_process(){
     setTimeout(function () {
-            fails++;
-            if (fails > 5) {
-                close();
-            } else {
-                start_process();
-            }
-        }, 5000);
+        fails++;
+        if (fails > 5) {
+            close();
+        } else {
+            start_process();
+        }
+    }, 5000);
 }
 
 function element_as_object(elem){

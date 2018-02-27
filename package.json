@@ -1,11 +1,11 @@
 {
-  "name": "Sample App",
+  "name": "gintonico",
   "main": "index.html",
   "single-instance": true,
   "window": {
     "position": "center",
-    "width": 600,
-    "height": 400,
+    "width": 720,
+    "height": 480,
     "frame" : true
   },
   "webkit": {
