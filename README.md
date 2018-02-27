@@ -4,7 +4,7 @@ Esta va a ser la mejor aplicacion en Go jamás vista.
 
 ## Guía de instalación
 
-Siga estas instruccines para obtener una copia de este proyecto funcionando correctamente en tu sistema operativo.
+Siga estas instrucciones para obtener una copia de este proyecto funcionando correctamente en tu sistema operativo.
 
 
 ### Prerrequisitos
