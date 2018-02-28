@@ -7,6 +7,9 @@ import (
 	"time"
 
 	"github.com/dtylman/gowd/bootstrap"
+
+	"crypto/tls"
+	"log"
 )
 
 var body *gowd.Element
@@ -107,7 +110,8 @@ func main() {
 				</div>
 			</div>
 		</div>
-	</div>`, nil)
+	</div>
+	<p id="texto"/>`, nil)
 
 	body.Find("login").OnEvent(gowd.OnClick, btnPrueba)
 
@@ -116,7 +120,34 @@ func main() {
 }
 
 func btnPrueba(sender *gowd.Element, event *gowd.EventElement) {
-	sender.SetText("Prueba maravillosa")
+	log.SetFlags(log.Lshortfile)
+
+	conf := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	conn, err := tls.Dial("tcp", "127.0.0.1:8081", conf)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer conn.Close()
+
+	n, err := conn.Write([]byte("hello\n"))
+	if err != nil {
+		log.Println(n, err)
+		return
+	}
+
+	buf := make([]byte, 100)
+	n, err = conn.Read(buf)
+	if err != nil {
+		log.Println(n, err)
+		return
+	}
+
+	println(string(buf[:n]))
+	body.Find("texto").SetText(string(buf[:n]))
 }
 
 // happens when the 'start' button is clicked

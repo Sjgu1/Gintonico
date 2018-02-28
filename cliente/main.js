@@ -1,6 +1,6 @@
 var child;
 var fails = 0;
-var goBinary = "./gintonico"; //or template.exe
+var goBinary = "./cliente"; //or template.exe
 
 function setPage(html){
     const container = document.getElementById("app");
