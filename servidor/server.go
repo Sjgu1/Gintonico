@@ -10,6 +10,7 @@ import (
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hi there!")
+
 }
 
 func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
@@ -32,5 +33,6 @@ func main() {
 	// Start the HTTPS server in a goroutine
 	go http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", nil)
 	// Start the HTTP server and redirect all incoming connections to HTTPS
-	http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS))
+	err2 := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS))
+	log.Fatal(err2)
 }

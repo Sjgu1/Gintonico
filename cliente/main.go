@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"net/http"
+
 	"github.com/dtylman/gowd"
 
 	"fmt"
@@ -122,32 +125,20 @@ func main() {
 func btnPrueba(sender *gowd.Element, event *gowd.EventElement) {
 	log.SetFlags(log.Lshortfile)
 
-	conf := &tls.Config{
-		InsecureSkipVerify: true,
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
-	conn, err := tls.Dial("tcp", "127.0.0.1:8081", conf)
+	client := &http.Client{Transport: tr}
+	buf, err := client.Get("https://localhost:8081")
 	if err != nil {
-		log.Println(err)
-		return
+		fmt.Println(err)
 	}
-	defer conn.Close()
+	var buffer = new(bytes.Buffer)
+	buffer.ReadFrom(buf.Body)
+	var resul = buffer.String()
 
-	n, err := conn.Write([]byte("hello\n"))
-	if err != nil {
-		log.Println(n, err)
-		return
-	}
-
-	buf := make([]byte, 100)
-	n, err = conn.Read(buf)
-	if err != nil {
-		log.Println(n, err)
-		return
-	}
-
-	println(string(buf[:n]))
-	body.Find("texto").SetText(string(buf[:n]))
+	println(buf)
+	body.Find("texto").SetText(resul)
 }
 
 // happens when the 'start' button is clicked
