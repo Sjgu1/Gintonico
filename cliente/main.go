@@ -2,19 +2,40 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/dtylman/gowd"
-
-	"fmt"
 
 	"github.com/dtylman/gowd/bootstrap"
 
 	"crypto/tls"
-	"log"
 )
 
 var body *gowd.Element
+
+// función para comprobar errores (ahorra escritura)
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+// respuesta del servidor
+type resp struct {
+	Ok  bool   // true -> correcto, false -> error
+	Msg string // mensaje adicional
+}
+
+// función para escribir una respuesta del servidor
+func response(w io.Writer, ok bool, msg string) {
+	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
+	rJSON, err := json.Marshal(&r) // codificamos en JSON
+	check(err)                     // comprobamos error
+	w.Write(rJSON)                 // escribimos el JSON resultante
+}
 
 func main() {
 	body = bootstrap.NewContainer(false)
@@ -102,20 +123,35 @@ func main() {
 }
 
 func btnPrueba(sender *gowd.Element, event *gowd.EventElement) {
-	log.SetFlags(log.Lshortfile)
+	/*log.SetFlags(log.Lshortfile)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
 	buf, err := client.Get("https://localhost:8081")
-	if err != nil {
-		fmt.Println(err)
-	}
+	check(err)
 	var buffer = new(bytes.Buffer)
 	buffer.ReadFrom(buf.Body)
 	var resul = buffer.String()
 
 	println(resul)
-	body.Find("texto").SetText(resul)
+	body.Find("texto").SetText(resul)*/
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	// ** ejemplo de registro
+	data := url.Values{}            // estructura para contener los valores
+	data.Set("login", "hola")       // comando (string)
+	data.Set("password", "saludos") // usuario (string)
+
+	r, err := client.PostForm("https://localhost:8081", data) // enviamos por POST
+	check(err)
+	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	s := buf.String()
+	body.Find("texto").SetText(s)
 }
