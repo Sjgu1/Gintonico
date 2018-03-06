@@ -84,7 +84,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.HandlerFunc(handlerLogin))
+	mux.Handle("/", http.HandlerFunc(handler))
 	mux.Handle("/login", http.HandlerFunc(handlerLogin))
 	mux.Handle("/register", http.HandlerFunc(handlerRegister))
 

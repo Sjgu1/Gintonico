@@ -2,14 +2,12 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"net/http"
 	"net/url"
 
 	"github.com/dtylman/gowd"
-
 	"github.com/dtylman/gowd/bootstrap"
-
-	"crypto/tls"
 )
 
 var body *gowd.Element
@@ -19,6 +17,17 @@ func check(e error) {
 	if e != nil {
 		panic(e)
 	}
+}
+
+func sendServerPetition(data map[string][]string) *http.Response {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	r, err := client.PostForm("http://localhost:8080/login", data) // enviamos por POST
+	check(err)
+	return r
 }
 
 func main() {
@@ -107,32 +116,14 @@ func main() {
 }
 
 func btnPrueba(sender *gowd.Element, event *gowd.EventElement) {
-	/*log.SetFlags(log.Lshortfile)
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-	buf, err := client.Get("https://localhost:8081")
-	check(err)
-	var buffer = new(bytes.Buffer)
-	buffer.ReadFrom(buf.Body)
-	var resul = buffer.String()
-
-	println(resul)
-	body.Find("texto").SetText(resul)*/
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
 
 	// ** ejemplo de registro
 	data := url.Values{}            // estructura para contener los valores
 	data.Set("login", "hola")       // comando (string)
 	data.Set("password", "saludos") // usuario (string)
 
-	r, err := client.PostForm("https://localhost:8081/login", data) // enviamos por POST
-	check(err)
+	r := sendServerPetition(data)
+
 	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(r.Body)
