@@ -36,7 +36,7 @@ func response(w io.Writer, ok bool, msg string) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi there!")
+	fmt.Fprintf(w, "Hi theresfsdgsfg!")
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func validarLogin(login string, password string) bool {
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi there!")
+	fmt.Fprintf(w, "Hi there1!")
 }
 
 func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +84,7 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.HandlerFunc(handler))
+	mux.Handle("/", http.HandlerFunc(handlerLogin))
 	mux.Handle("/login", http.HandlerFunc(handlerLogin))
 	mux.Handle("/register", http.HandlerFunc(handlerRegister))
 

@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -21,20 +19,6 @@ func check(e error) {
 	if e != nil {
 		panic(e)
 	}
-}
-
-// respuesta del servidor
-type resp struct {
-	Ok  bool   // true -> correcto, false -> error
-	Msg string // mensaje adicional
-}
-
-// función para escribir una respuesta del servidor
-func response(w io.Writer, ok bool, msg string) {
-	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
-	rJSON, err := json.Marshal(&r) // codificamos en JSON
-	check(err)                     // comprobamos error
-	w.Write(rJSON)                 // escribimos el JSON resultante
 }
 
 func main() {
@@ -147,7 +131,7 @@ func btnPrueba(sender *gowd.Element, event *gowd.EventElement) {
 	data.Set("login", "hola")       // comando (string)
 	data.Set("password", "saludos") // usuario (string)
 
-	r, err := client.PostForm("https://localhost:8081", data) // enviamos por POST
+	r, err := client.PostForm("https://localhost:8081/login", data) // enviamos por POST
 	check(err)
 	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 	buf := new(bytes.Buffer)
