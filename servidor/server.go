@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
 	"github.com/kabukky/httpscerts"
 )
@@ -27,24 +31,45 @@ func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// Check if the cert files are available.
+
+	stopChan := make(chan os.Signal)
+	signal.Notify(stopChan, os.Interrupt)
+
+	// Comprueba los certificados, si no existen se generan nuevos
 	err := httpscerts.Check("cert.pem", "key.pem")
-	// If they are not available, generate new ones.
+
 	if err != nil {
 		err = httpscerts.Generate("cert.pem", "key.pem", ":8081")
 		if err != nil {
-			log.Fatal("Error: Couldn't create https certs.")
+			log.Fatal("Error: No se han podido crear los certificados https.")
 		}
 	}
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/login", handlerLogin)
-	http.HandleFunc("/register", handlerRegister)
 
-	// Start the HTTPS server in a goroutine
-	go http.ListenAndServeTLS(":8081", "cert.pem", "key.pem", nil)
-	// Start the HTTP server and redirect all incoming connections to HTTPS
-	err2 := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS))
-	if err2 != nil {
-		log.Fatal(err2)
-	}
+	mux := http.NewServeMux()
+	mux.Handle("/", http.HandlerFunc(handler))
+	mux.Handle("/login", http.HandlerFunc(handlerLogin))
+	mux.Handle("/register", http.HandlerFunc(handlerRegister))
+
+	srv := &http.Server{Addr: ":8081", Handler: mux}
+
+	go func() {
+		if err := srv.ListenAndServeTLS("cert.pem", "key.pem"); err != nil {
+			log.Printf("listen: %s\n", err)
+		}
+	}()
+	// Inicia el servidor HTTP y redirige todas las peticiones a HTTPS
+	go func() {
+		if err := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS)); err != nil {
+			log.Printf("listen: %s\n", err)
+		}
+	}()
+
+	<-stopChan // espera señal SIGINT
+	log.Println("Apagando servidor ...")
+	// apagar servidor de forma segura
+	ctx, fnc := context.WithTimeout(context.Background(), 5*time.Second)
+	fnc()
+	srv.Shutdown(ctx)
+
+	log.Println("Servidor detenido correctamente")
 }
