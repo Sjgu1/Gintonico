@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -12,13 +14,49 @@ import (
 	"github.com/kabukky/httpscerts"
 )
 
+// respuesta del servidor
+type resp struct {
+	Ok  bool   // true -> correcto, false -> error
+	Msg string // mensaje adicional
+}
+
+// función para comprobar errores (ahorra escritura)
+func chk(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+// función para escribir una respuesta del servidor
+func response(w io.Writer, ok bool, msg string) {
+	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
+	rJSON, err := json.Marshal(&r) // codificamos en JSON
+	chk(err)                       // comprobamos error
+	w.Write(rJSON)                 // escribimos el JSON resultante
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hi there!")
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()                                // es necesario parsear el formulario
+	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
-	fmt.Fprintf(w, "Hi there!")
+	if validarLogin(r.Form.Get("login"), r.Form.Get("password")) {
+		response(w, true, "Logeado")
+	} else {
+		response(w, false, "Error")
+	}
+
+}
+
+func validarLogin(login string, password string) bool {
+
+	log.Println("Usuario: " + login)
+	log.Println("Password: " + password)
+	return true
+
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
