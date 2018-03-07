@@ -46,21 +46,38 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	if validarLogin(r.Form.Get("login"), r.Form.Get("password")) {
 		response(w, true, "Logeado")
 	} else {
-		response(w, false, "Error")
+		response(w, false, "Error al loguear")
 	}
-
 }
 
 func validarLogin(login string, password string) bool {
-
+	log.Println("---------Login---------")
 	log.Println("Usuario: " + login)
 	log.Println("Password: " + password)
-	return true
+	log.Println("-----------------------")
 
+	return login != "" && password != ""
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi there1!")
+	r.ParseForm()                                // es necesario parsear el formulario
+	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
+
+	if validarRegister(r.Form.Get("register"), r.Form.Get("password"), r.Form.Get("confirm")) {
+		response(w, true, "Registrado")
+	} else {
+		response(w, false, "Error al registrar")
+	}
+}
+
+func validarRegister(register string, password string, confirm string) bool {
+	log.Println("---------Register---------")
+	log.Println("Usuario: " + register)
+	log.Println("Password: " + password)
+	log.Println("Password confirm: " + confirm)
+	log.Println("--------------------------")
+
+	return register != "" && password != "" && confirm != "" && password == confirm
 }
 
 func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
@@ -91,14 +108,16 @@ func main() {
 	srv := &http.Server{Addr: ":8081", Handler: mux}
 
 	go func() {
+		log.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
 		if err := srv.ListenAndServeTLS("cert.pem", "key.pem"); err != nil {
-			log.Printf("listen: %s\n", err)
+			log.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
 		}
 	}()
 	// Inicia el servidor HTTP y redirige todas las peticiones a HTTPS
 	go func() {
+		log.Println("Poniendo en marcha redireccionamiento HTTP->HTTPS, escuchando puerto 8080")
 		if err := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS)); err != nil {
-			log.Printf("listen: %s\n", err)
+			log.Printf("Error al redireccionar http a https: %s\n", err)
 		}
 	}()
 
