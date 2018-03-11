@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -12,12 +14,20 @@ import (
 	"time"
 
 	"github.com/kabukky/httpscerts"
+	"golang.org/x/crypto/scrypt"
 )
 
 // respuesta del servidor
 type resp struct {
 	Ok  bool   // true -> correcto, false -> error
 	Msg string // mensaje adicional
+}
+type Users struct {
+	Users []User `json:"users"`
+}
+type User struct {
+	User     string `json:"user"`
+	Password string `json:"password"`
 }
 
 // función para comprobar errores (ahorra escritura)
@@ -51,12 +61,70 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func validarLogin(login string, password string) bool {
-	log.Println("---------Login---------")
-	log.Println("Usuario: " + login)
-	log.Println("Password: " + password)
-	log.Println("-----------------------")
+	// Abre el archivo json
+	jsonFile, err := os.Open("users.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
 
-	return login != "" && password != ""
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Users array
+	var users Users
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &users)
+	// Comprueba si algun usuario coincide con el del login
+
+	for i := 0; i < len(users.Users); i++ {
+		fmt.Println("Entra")
+		fmt.Println(users.Users[i].User)
+		fmt.Println(encriptarScrypt(password))
+
+		fmt.Println("Comprueba")
+		fmt.Println(users.Users[i].User)
+		fmt.Println(users.Users[i].Password)
+
+		if login == users.Users[i].User && encriptarScrypt(password) == users.Users[i].Password {
+			return true
+		}
+	}
+	return false
+
+}
+
+func comprobarExisteUsuario(usuario string) bool {
+	// Abre el archivo json
+	jsonFile, err := os.Open("users.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Users array
+	var users Users
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &users)
+
+	// Comprueba si algun usuario coincide con el del login
+	for i := 0; i < len(users.Users); i++ {
+		if usuario == users.Users[i].User {
+			return true
+		}
+	}
+	return false
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
@@ -71,18 +139,71 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func validarRegister(register string, password string, confirm string) bool {
-	log.Println("---------Register---------")
-	log.Println("Usuario: " + register)
-	log.Println("Password: " + password)
-	log.Println("Password confirm: " + confirm)
-	log.Println("--------------------------")
+	//Las password no coinciden
+	if password != confirm || register == "" || password == "" {
+		return false
+	}
 
-	return register != "" && password != "" && confirm != "" && password == confirm
+	//El usuario ya existe en la base de datos
+	if comprobarExisteUsuario(register) {
+		return false
+	}
+
+	// Abre el archivo json
+	jsonFile, err := os.Open("users.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Users array
+	var users Users
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &users)
+
+	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password)})
+
+	usersJSON, _ := json.Marshal(users)
+	err = ioutil.WriteFile("users.json", usersJSON, 0644)
+
+	// IMPRIMIR USUARIOS
+	/*
+		for _, v := range users.Users {
+			fmt.Println(v)
+		}
+		fmt.Println()
+	*/
+	// now Marshal it
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+
+	return true
 }
 
 func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 	// Redirect the incoming HTTP request. Note that "127.0.0.1:8081" will only work if you are accessing the server from your local machine.
 	http.Redirect(w, r, "https://127.0.0.1:8081"+r.RequestURI, http.StatusMovedPermanently)
+}
+
+// Devuelve el string de la cadena encriptada
+func encriptarScrypt(cadena string) string {
+	salt := []byte{0xc8, 0x28, 0xf2, 0x58, 0xa7, 0x6a, 0xad, 0x7b}
+
+	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 8, 1, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return base64.StdEncoding.EncodeToString(dk)
 }
 
 func main() {
