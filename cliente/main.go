@@ -33,8 +33,9 @@ func sendServerPetition(data map[string][]string, route string) *http.Response {
 
 func main() {
 	body = bootstrap.NewContainer(false)
+	//body.SetAttribute("background-color", "#e26550")
 
-	body.AddHTML(`<div style="margin:0 auto;width:40%;"><img src="img/logo.png" style="width:100%;margin:0 auto"/></div><br/><br/>`, nil)
+	body.AddHTML(`<div style="margin:0 auto;width:40%;"><img src="img/logo_alargado.png" style="width:100%;margin:0 auto"/></div><br/><br/>`, nil)
 
 	switch mostrar {
 	case "login":
