@@ -82,15 +82,8 @@ func validarLogin(login string, password string) bool {
 	// Comprueba si algun usuario coincide con el del login
 
 	for i := 0; i < len(users.Users); i++ {
-		fmt.Println("Entra")
-		fmt.Println(users.Users[i].User)
-		fmt.Println(encriptarScrypt(password))
 
-		fmt.Println("Comprueba")
-		fmt.Println(users.Users[i].User)
-		fmt.Println(users.Users[i].Password)
-
-		if login == users.Users[i].User && encriptarScrypt(password) == users.Users[i].Password {
+		if login == users.Users[i].User && encriptarScrypt(password, login) == users.Users[i].Password {
 			return true
 		}
 	}
@@ -169,7 +162,7 @@ func validarRegister(register string, password string, confirm string) bool {
 	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(byteValue, &users)
 
-	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password)})
+	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, register)})
 
 	usersJSON, _ := json.Marshal(users)
 	err = ioutil.WriteFile("users.json", usersJSON, 0644)
@@ -196,8 +189,8 @@ func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 }
 
 // Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string) string {
-	salt := []byte{0xc8, 0x28, 0xf2, 0x58, 0xa7, 0x6a, 0xad, 0x7b}
+func encriptarScrypt(cadena string, usuario string) string {
+	salt := []byte(usuario)
 
 	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 8, 1, 32)
 	if err != nil {
