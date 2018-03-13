@@ -11,7 +11,7 @@ function setPage(html){
         elem.focus();
     }
 
-    try{
+    /*try{
         $('#login-form-link').click(function(e) {
             $("#login-form").delay(100).fadeIn(100);
             $("#register-form").fadeOut(100);
@@ -28,7 +28,7 @@ function setPage(html){
         });
     }catch(err){
         
-    }
+    }*/
 }
 
 function body_message(msg){    
