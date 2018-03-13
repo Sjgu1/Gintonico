@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,12 +23,17 @@ type resp struct {
 	Ok  bool   // true -> correcto, false -> error
 	Msg string // mensaje adicional
 }
+
+// Estructura de usuarios
 type Users struct {
 	Users []User `json:"users"`
 }
+
+//Estructura de usuario
 type User struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
+	Salt     string `json:"salt"`
 }
 
 // función para comprobar errores (ahorra escritura)
@@ -43,6 +49,21 @@ func response(w io.Writer, ok bool, msg string) {
 	rJSON, err := json.Marshal(&r) // codificamos en JSON
 	chk(err)                       // comprobamos error
 	w.Write(rJSON)                 // escribimos el JSON resultante
+}
+
+// Int Aleatorio
+func randInt(min int, max int) int {
+	return min + rand.Intn(max-min)
+}
+
+// String Aleatorio
+func randomString(l int) string {
+	rand.Seed(time.Now().UTC().UnixNano())
+	bytes := make([]byte, l)
+	for i := 0; i < l; i++ {
+		bytes[i] = byte(randInt(65, 90))
+	}
+	return string(bytes)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +104,7 @@ func validarLogin(login string, password string) bool {
 
 	for i := 0; i < len(users.Users); i++ {
 
-		if login == users.Users[i].User && encriptarScrypt(password, login) == users.Users[i].Password {
+		if login == users.Users[i].User && encriptarScrypt(password, users.Users[i].Salt) == users.Users[i].Password {
 			return true
 		}
 	}
@@ -162,7 +183,9 @@ func validarRegister(register string, password string, confirm string) bool {
 	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(byteValue, &users)
 
-	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, register)})
+	salt := randomString(30)
+
+	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, salt), Salt: salt})
 
 	usersJSON, _ := json.Marshal(users)
 	err = ioutil.WriteFile("users.json", usersJSON, 0644)
@@ -189,8 +212,8 @@ func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 }
 
 // Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string, usuario string) string {
-	salt := []byte(usuario)
+func encriptarScrypt(cadena string, seed string) string {
+	salt := []byte(seed)
 
 	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 8, 1, 32)
 	if err != nil {
