@@ -3,11 +3,14 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
+	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
+	"golang.org/x/crypto/scrypt"
 )
 
 var body *gowd.Element
@@ -163,8 +166,10 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 
 	// ** ejemplo de registro
 	data := url.Values{} // estructura para contener los valores
-	data.Set("login", body.Find("usuario").GetValue())
-	data.Set("password", body.Find("contraseña").GetValue())
+	usuario := body.Find("usuario").GetValue()
+	pass := body.Find("contraseña").GetValue()
+	data.Set("login", usuario)
+	data.Set("password", encriptarScrypt(pass, usuario))
 
 	response := sendServerPetition(data, "/login")
 
@@ -179,9 +184,12 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 
 	// ** ejemplo de registro
 	data := url.Values{} // estructura para contener los valores
-	data.Set("register", body.Find("registerUser").GetValue())
-	data.Set("password", body.Find("registerPassword").GetValue())
-	data.Set("confirm", body.Find("confirmPassword").GetValue())
+	usuario := body.Find("registerUser").GetValue()
+	pass := body.Find("registerPassword").GetValue()
+	confirm := body.Find("confirmPassword").GetValue()
+	data.Set("register", usuario)
+	data.Set("password", encriptarScrypt(pass, usuario))
+	data.Set("confirm", encriptarScrypt(confirm, usuario))
 
 	response := sendServerPetition(data, "/register")
 
@@ -192,4 +200,15 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 	body.Find("texto").SetText(s)
 	body.Find("login-form-link").RemoveAttribute("active")
 	body.Find("register-form-link").SetClass("active")
+}
+
+// Devuelve el string de la cadena encriptada
+func encriptarScrypt(cadena string, seed string) string {
+	salt := []byte(seed)
+
+	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return base64.StdEncoding.EncodeToString(dk)
 }

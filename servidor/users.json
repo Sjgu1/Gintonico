@@ -1,1 +1,14 @@
-{"users":[{"user":"as","password":"Sr0TcVVsojJ7audmEayxH7eAmQQ+bsyMrm+TcCORcoM=","salt":"DEAUJDHGCWXHVTKHWXPSRABGPIPBGI"},{"user":"as2","password":"y8tYXcQbnRL1P86r7p8t7tlrT2ZaN66Bk/KX7fjRfXQ=","salt":"IIDSDRXNUFDHXBPHBJUNIOUJQPXDWQ"}]}
+{
+    "users": [
+        {
+            "user": "sergio",
+            "password": "V1nom23TfDju5JkYyOwkMBLQaw5yb48g23z+V5rHvSQ=",
+            "salt": "IAJNDXCUIOMMOXIKUBFUABUIILDTMK"
+        },
+        {
+            "user": "larry",
+            "password": "TWxLBBqVJ701V1pjUoYykQ7T0UOE3CF1K3fLqWCmiMM=",
+            "salt": "TXSXGQCFBCKBXLADJVJGTOQOCAVVXL"
+        }
+    ]
+}

@@ -82,11 +82,25 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func validarLogin(login string, password string) bool {
+	fmt.Println("login: " + login + " pass: " + password)
 	// Abre el archivo json
 	jsonFile, err := os.Open("users.json")
 	// if we os.Open returns an error then handle it
 	if err != nil {
 		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat("users.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("users.json")
+			if err != nil {
+				fmt.Println(err)
+			}
+			defer file.Close()
+		}
+
+		fmt.Println("==> done creating file", "users.json")
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
@@ -103,7 +117,6 @@ func validarLogin(login string, password string) bool {
 	// Comprueba si algun usuario coincide con el del login
 
 	for i := 0; i < len(users.Users); i++ {
-
 		if login == users.Users[i].User && encriptarScrypt(password, users.Users[i].Salt) == users.Users[i].Password {
 			return true
 		}
@@ -168,7 +181,17 @@ func validarRegister(register string, password string, confirm string) bool {
 	// if we os.Open returns an error then handle it
 	if err != nil {
 		fmt.Println(err)
-		return false
+		var _, err = os.Stat("users.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("users.json")
+			if err != nil {
+				fmt.Println(err)
+				return false
+			}
+			defer file.Close()
+		}
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
@@ -215,7 +238,7 @@ func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 func encriptarScrypt(cadena string, seed string) string {
 	salt := []byte(seed)
 
-	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 8, 1, 32)
+	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -223,7 +246,6 @@ func encriptarScrypt(cadena string, seed string) string {
 }
 
 func main() {
-
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 

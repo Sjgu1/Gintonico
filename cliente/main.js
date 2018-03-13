@@ -133,3 +133,4 @@ function avoid_reload(){
 
 avoid_reload();
 start_process();
+require('nw.gui').Window.get().maximize();
