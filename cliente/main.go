@@ -16,6 +16,7 @@ import (
 
 var body *gowd.Element
 var mostrar = "login"
+var login = ""
 
 type resp struct {
 	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
@@ -42,18 +43,20 @@ func sendServerPetition(data map[string][]string, route string) *http.Response {
 
 func main() {
 	body = bootstrap.NewContainer(false)
-	//body.SetAttribute("background-color", "#e26550")
+	//body.SetAttribute("style", "background-color:#FF654E")
 
-	body.AddHTML(`<div style="margin:0 auto;width:40%;"><img src="img/logo_alargado.png" style="width:100%;margin:0 auto"/></div><br/><br/>`, nil)
+	logo := `<div style="margin:0 auto;width:40%;"><img src="img/logo_alargado.png" style="width:100%;margin:0 auto"/></div><br/><br/>`
 
 	switch mostrar {
 	case "login":
+		body.AddHTML(logo, nil)
 		body.AddHTML(vistaLogin(), nil)
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendLogin)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, actualizarVista)
 		cambiarVista("register")
 		break
 	case "register":
+		body.AddHTML(logo, nil)
 		body.AddHTML(vistaRegister(), nil)
 		body.Find("register-submit").OnEvent(gowd.OnClick, sendRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, actualizarVista)
@@ -61,6 +64,8 @@ func main() {
 		break
 	case "principal":
 		body.AddHTML(vistaPrincipal(), nil)
+		body.Find("logout-link").OnEvent(gowd.OnClick, actualizarVista)
+		cambiarVista("login")
 		break
 	}
 
@@ -161,7 +166,37 @@ func vistaRegister() string {
 }
 
 func vistaPrincipal() string {
-	return `saludos`
+	return `<nav class="navbar navbar-default">
+	<div class="container-fluid">
+	  <div class="navbar-header">
+		<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+		  <span class="sr-only">Toggle navigation</span>
+		  <span class="icon-bar"></span>
+		  <span class="icon-bar"></span>
+		  <span class="icon-bar"></span>
+		</button>
+		<a class="navbar-brand" href="#">Gintónico</a>
+	  </div>
+	  <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+		<ul class="nav navbar-nav">
+		  <li class="active"><a href="#">Principal <span class="sr-only">(current)</span></a></li>
+		  <li><a href="#">Otra página</a></li>
+		</ul>
+		<ul class="nav navbar-nav navbar-right">
+		  <li><a> Bienvenido/a ` + login + ` !</a></li>
+		  <li class="dropdown">
+			<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
+			<ul class="dropdown-menu">
+			  <li><a href="#">Accion increíble</a></li>
+			  <li><a href="#">Esta es mejor</a></li>
+			  <li role="separator" class="divider"></li>
+			  <li><a href="#" id="logout-link" >Cerrar sesión</a></li>
+			</ul>
+		  </li>
+		</ul>
+	  </div>
+	</div>
+  </nav>`
 }
 
 func actualizarVista(sender *gowd.Element, event *gowd.EventElement) { //por si necesitamos hacer algo especial a la hora de actualizar
@@ -181,19 +216,15 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	data.Set("password", encriptarScrypt(pass, usuario))
 
 	response := sendServerPetition(data, "/login")
-
-	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
-	/*s := buf.String()
-	body.Find("texto").SetText(s)*/
 
 	var respuesta resp
-
 	err := json.Unmarshal(buf.Bytes(), &respuesta)
 	check(err)
 
 	if respuesta.Ok == true {
+		login = usuario
 		cambiarVista("principal")
 		actualizarVista(nil, nil)
 	}
