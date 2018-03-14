@@ -20,8 +20,8 @@ import (
 
 // respuesta del servidor
 type resp struct {
-	Ok  bool   // true -> correcto, false -> error
-	Msg string // mensaje adicional
+	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
+	Msg string `json:"msg"` // mensaje adicional
 }
 
 // Estructura de usuarios

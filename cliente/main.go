@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,6 +16,11 @@ import (
 
 var body *gowd.Element
 var mostrar = "login"
+
+type resp struct {
+	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
+	Msg string `json:"msg"` // mensaje adicional
+}
 
 // función para comprobar errores (ahorra escritura)
 func check(e error) {
@@ -44,20 +50,22 @@ func main() {
 	case "login":
 		body.AddHTML(vistaLogin(), nil)
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendLogin)
-		body.Find("register-form-link").OnEvent(gowd.OnClick, mostrarRegister)
-		body.Find("login-form-link").OnEvent(gowd.OnClick, mostrarLogin)
+		body.Find("register-form-link").OnEvent(gowd.OnClick, actualizarVista)
+		cambiarVista("register")
 		break
 	case "register":
 		body.AddHTML(vistaRegister(), nil)
 		body.Find("register-submit").OnEvent(gowd.OnClick, sendRegister)
-		body.Find("login-form-link").OnEvent(gowd.OnClick, mostrarLogin)
-		body.Find("register-form-link").OnEvent(gowd.OnClick, mostrarRegister)
+		body.Find("login-form-link").OnEvent(gowd.OnClick, actualizarVista)
+		cambiarVista("login")
+		break
+	case "principal":
+		body.AddHTML(vistaPrincipal(), nil)
 		break
 	}
 
 	//start the ui loop
 	err := gowd.Run(body)
-
 	check(err)
 }
 
@@ -152,19 +160,20 @@ func vistaRegister() string {
 	<p id="texto"/>`
 }
 
-func mostrarLogin(sender *gowd.Element, event *gowd.EventElement) {
-	mostrar = "login"
+func vistaPrincipal() string {
+	return `saludos`
+}
+
+func actualizarVista(sender *gowd.Element, event *gowd.EventElement) { //por si necesitamos hacer algo especial a la hora de actualizar
 	main()
 }
 
-func mostrarRegister(sender *gowd.Element, event *gowd.EventElement) {
-	mostrar = "register"
-	main()
+func cambiarVista(vista string) {
+	mostrar = vista
 }
 
 func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
-
-	// ** ejemplo de registro
+	// ** ejemplo de login
 	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("usuario").GetValue()
 	pass := body.Find("contraseña").GetValue()
@@ -176,12 +185,21 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
-	s := buf.String()
-	body.Find("texto").SetText(s)
+	/*s := buf.String()
+	body.Find("texto").SetText(s)*/
+
+	var respuesta resp
+
+	err := json.Unmarshal(buf.Bytes(), &respuesta)
+	check(err)
+
+	if respuesta.Ok == true {
+		cambiarVista("principal")
+		actualizarVista(nil, nil)
+	}
 }
 
 func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
-
 	// ** ejemplo de registro
 	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("registerUser").GetValue()
