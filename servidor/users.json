@@ -9,6 +9,11 @@
             "user": "larry",
             "password": "TWxLBBqVJ701V1pjUoYykQ7T0UOE3CF1K3fLqWCmiMM=",
             "salt": "TXSXGQCFBCKBXLADJVJGTOQOCAVVXL"
+        },
+        {
+            "user": "admin",
+            "password": "OCyXube5mmCdAkcFgVIwsQZ7SwkkGKNQELiHMTn83zA=",
+            "salt": "UQQVUJAVAECAHGPVEWUJUSDGOQKWFX"
         }
     ]
 }
