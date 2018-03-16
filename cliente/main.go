@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -27,7 +28,7 @@ type resp struct {
 // función para comprobar errores (ahorra escritura)
 func check(e error) {
 	if e != nil {
-		panic(e)
+		fmt.Println(e.Error())
 	}
 }
 
@@ -200,7 +201,7 @@ func vistaPrincipal() string {
 	  </br>
 	  </br>
 	  </br>
-	  <button id="file-selector" type="button" class="btn btn-default">Selecciona un fichero</button>
+	  <button id="file-selector" type="button" class="btn btn-primary btn-md">Selecciona un fichero</button>
 	  </br>
 	  </br>
 	  </br>
@@ -265,9 +266,12 @@ func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	//dialog.Message("%s", "Por favor, selecciona el fichero").Title("Dale calor!").Info()
 	file, err := dialog.File().Title("Save As").Filter("All Files", "*").Load()
 	//fmt.Println(file)
-	check(err)
-	//fmt.Println("Error:", err)
-	dialog.Message("Has seleccionado el fichero: %s", file).Title("Increíble!").Info()
+	if err != nil && err.Error() == "Cancelled" {
+		//cancelada seleccion de fichero
+	} else {
+		check(err)
+		dialog.Message("Has seleccionado el fichero: %s", file).Title("Increíble!").Info()
+	}
 }
 
 // Devuelve el string de la cadena encriptada
