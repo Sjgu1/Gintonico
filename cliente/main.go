@@ -11,6 +11,7 @@ import (
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
+	"github.com/sqweek/dialog"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -65,6 +66,7 @@ func main() {
 	case "principal":
 		body.AddHTML(vistaPrincipal(), nil)
 		body.Find("logout-link").OnEvent(gowd.OnClick, actualizarVista)
+		body.Find("file-selector").OnEvent(gowd.OnClick, seleccionarFichero)
 		cambiarVista("login")
 		break
 	}
@@ -190,11 +192,18 @@ func vistaPrincipal() string {
 			  <li><a href="#">Accion increíble</a></li>
 			  <li><a href="#">Esta es mejor</a></li>
 			  <li role="separator" class="divider"></li>
-			  <li><a href="#" id="logout-link" >Cerrar sesión</a></li>
+			  <li><a href="#" id="logout-link"><i class="icon-off"></i>Cerrar sesión</a></li>
 			</ul>
 		  </li>
 		</ul>
 	  </div>
+	  </br>
+	  </br>
+	  </br>
+	  <button id="file-selector" type="button" class="btn btn-default">Selecciona un fichero</button>
+	  </br>
+	  </br>
+	  </br>
 	</div>
   </nav>`
 }
@@ -249,6 +258,16 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 	body.Find("texto").SetText(s)
 	body.Find("login-form-link").RemoveAttribute("active")
 	body.Find("register-form-link").SetClass("active")
+}
+
+func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
+	//filename, err := dialog.File().Filter("Mp3 audio file", "mp3").Load()
+	//dialog.Message("%s", "Por favor, selecciona el fichero").Title("Dale calor!").Info()
+	file, err := dialog.File().Title("Save As").Filter("All Files", "*").Load()
+	//fmt.Println(file)
+	check(err)
+	//fmt.Println("Error:", err)
+	dialog.Message("Has seleccionado el fichero: %s", file).Title("Increíble!").Info()
 }
 
 // Devuelve el string de la cadena encriptada
