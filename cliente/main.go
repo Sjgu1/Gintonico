@@ -65,7 +65,7 @@ func main() {
 		cambiarVista("login")
 		break
 	case "principal":
-		body.AddHTML(vistaPrincipal(), nil)
+		body.AddHTML(vistaPrincipal2(), nil)
 		body.Find("logout-link").OnEvent(gowd.OnClick, actualizarVista)
 		body.Find("file-selector").OnEvent(gowd.OnClick, seleccionarFichero)
 		cambiarVista("login")
@@ -85,10 +85,10 @@ func vistaLogin() string {
 					<div class="panel-heading">
 						<div class="row">
 							<div class="col-xs-6">
-								<a id="login-form-link" href="#" class="active">Login</a>
+								<a id="login-form-link" href="#" class="active">Iniciar Sesión</a>
 							</div>
 							<div class="col-xs-6">
-								<a id="register-form-link" href="#">Register</a>
+								<a id="register-form-link" href="#">Registro</a>
 							</div>
 						</div>
 						<hr>
@@ -98,10 +98,10 @@ func vistaLogin() string {
 							<div class="col-lg-12">
 								<div id="login-form">
 									<div class="form-group">
-										<input type="text" id="usuario" class="form-control" placeholder="Usuario" autocomplete="off">
+										<input type="text" id="usuario" class="form-control" placeholder="Usuario">
 									</div>
 									<div class="form-group">
-										<input type="password" id="contraseña" class="form-control" placeholder="Contraseña" autocomplete="off">
+										<input type="password" id="contraseña" class="form-control" placeholder="Contraseña">
 									</div>
 									<div class="form-group">
 										<div class="row">
@@ -129,10 +129,10 @@ func vistaRegister() string {
 					<div class="panel-heading">
 						<div class="row">
 							<div class="col-xs-6">
-								<a id="login-form-link" href="#">Login</a>
+								<a id="login-form-link" href="#">Iniciar Sesión</a>
 							</div>
 							<div class="col-xs-6">
-								<a id="register-form-link" href="#" class="active">Register</a>
+								<a id="register-form-link" href="#" class="active">Registro</a>
 							</div>
 						</div>
 						<hr>
@@ -207,6 +207,195 @@ func vistaPrincipal() string {
 	  </br>
 	</div>
   </nav>`
+}
+
+func vistaPrincipal2() string {
+	return `<nav class="navbar navbar-default">
+	<div class="container-fluid">
+	  <div class="navbar-header">
+		<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+		  <span class="sr-only">Toggle navigation</span>
+		  <span class="icon-bar"></span>
+		  <span class="icon-bar"></span>
+		  <span class="icon-bar"></span>
+		</button>
+		<a class="navbar-brand" href="#">Gintónico</a>
+	  </div>
+	  <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+		<ul class="nav navbar-nav">
+		  <li class="active"><a href="#">Principal <span class="sr-only">(current)</span></a></li>
+		  <li><a href="#">Otra página</a></li>
+		</ul>
+		<ul class="nav navbar-nav navbar-right">
+		  <li><a> Bienvenido/a ` + login + ` !</a></li>
+		  <li class="dropdown">
+			<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
+			<ul class="dropdown-menu">
+			  <li><a href="#">Accion increíble</a></li>
+			  <li><a href="#">Esta es mejor</a></li>
+			  <li role="separator" class="divider"></li>
+			  <li><a href="#" id="logout-link"><i class="icon-off"></i>Cerrar sesión</a></li>
+			</ul>
+		  </li>
+		</ul>
+	  </div>
+	</div>
+	</br>
+	</br>
+	<div class="container" style="background-color:#F8F8F8;width:97%;margin-right: 0px;margin-left:15px;">
+		<div class="row" style="margin: 0 auto;">
+			<div class="col-md-3">
+				<div class="ibox float-e-margins">
+					<div class="ibox-content">
+						<div class="file-manager">
+							<h5>Show:</h5>
+							<a href="#" class="file-control active">Ale</a>
+							<a href="#" class="file-control">Documents</a>
+							<a href="#" class="file-control">Audio</a>
+							<a href="#" class="file-control">Images</a>
+							<div class="hr-line-dashed"></div>
+							<button id="file-selector" class="btn btn-primary btn-block">Sube un fichero</button>
+							<!--<button  ype="button" class="btn btn-primary btn-md">Selecciona un fichero</button>-->
+							<div class="hr-line-dashed"></div>
+							<h5>Folders</h5>
+							<ul class="folder-list" style="padding: 0">
+								<li><a href=""><i class="fa fa-folder"></i> Files</a></li>
+								<li><a href=""><i class="fa fa-folder"></i> Pictures</a></li>
+								<li><a href=""><i class="fa fa-folder"></i> Web pages</a></li>
+								<li><a href=""><i class="fa fa-folder"></i> Illustrations</a></li>
+								<li><a href=""><i class="fa fa-folder"></i> Films</a></li>
+								<li><a href=""><i class="fa fa-folder"></i> Books</a></li>
+							</ul>
+							<h5 class="tag-title">Tags</h5>
+							<ul class="tag-list" style="padding: 0">
+								<li><a href="">Family</a></li>
+								<li><a href="">Work</a></li>
+								<li><a href="">Home</a></li>
+								<li><a href="">Children</a></li>
+								<li><a href="">Holidays</a></li>
+								<li><a href="">Music</a></li>
+								<li><a href="">Photography</a></li>
+								<li><a href="">Film</a></li>
+							</ul>
+							<div class="clearfix"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-9">
+				<div class="row" style="margin: 0 auto;">
+					<div class="col-lg-12">
+						<div class="file-box">
+							<div class="file">
+								<a href="#">
+									<span class="corner"></span>
+									<div class="icon">
+										<i class="fa fa-file"></i>
+									</div>
+									<div class="file-name">
+										Document_2014.doc
+										<br>
+										<small>Added: Jan 11, 2014</small>
+									</div>
+								</a>
+							</div>
+						</div>
+						<div class="file-box">
+							<div class="file">
+								<a href="#">
+									<span class="corner"></span>
+									<div class="image">
+										<img alt="image" class="img-responsive" src="https://lorempixel.com/400/300/nature/1">
+									</div>
+									<div class="file-name">
+										Italy street.jpg
+										<br>
+										<small>Added: Jan 6, 2014</small>
+									</div>
+								</a>
+							</div>
+						</div>
+						<div class="file-box">
+							<div class="file">
+								<a href="#">
+									<span class="corner"></span>
+									<div class="image">
+										<img alt="image" class="img-responsive" src="https://lorempixel.com/400/300/nature/2">
+									</div>
+									<div class="file-name">
+										My feel.png
+										<br>
+										<small>Added: Jan 7, 2014</small>
+									</div>
+								</a>
+							</div>
+						</div>
+						<div class="file-box">
+							<div class="file">
+								<a href="#">
+									<span class="corner"></span>
+									<div class="icon">
+										<i class="fa fa-music"></i>
+									</div>
+									<div class="file-name">
+										Michal Jackson.mp3
+										<br>
+										<small>Added: Jan 22, 2014</small>
+									</div>
+								</a>
+							</div>
+						</div>
+						<div class="file-box">
+							<div class="file">
+								<a href="#">
+									<span class="corner"></span>
+									<div class="image">
+										<img alt="image" class="img-responsive" src="https://lorempixel.com/400/300/nature/3">
+									</div>
+									<div class="file-name">
+										Document_2014.doc
+										<br>
+										<small>Added: Fab 11, 2014</small>
+									</div>
+								</a>
+							</div>
+						</div>
+						<div class="file-box">
+							<div class="file">
+								<a href="#">
+									<span class="corner"></span>
+									<div class="icon">
+										<i class="img-responsive fa fa-film"></i>
+									</div>
+									<div class="file-name">
+										Monica's birthday.mpg4
+										<br>
+										<small>Added: Fab 18, 2014</small>
+									</div>
+								</a>
+							</div>
+						</div>
+						<div class="file-box">
+							<a href="#">
+								<div class="file">
+									<span class="corner"></span>
+									<div class="icon">
+										<i class="fa fa-bar-chart-o"></i>
+									</div>
+									<div class="file-name">
+										Annual report 2014.xls
+										<br>
+										<small>Added: Fab 22, 2014</small>
+									</div>
+								</div>
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	</nav>`
 }
 
 func actualizarVista(sender *gowd.Element, event *gowd.EventElement) { //por si necesitamos hacer algo especial a la hora de actualizar
