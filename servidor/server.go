@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +15,8 @@ import (
 	"net/textproto"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kabukky/httpscerts"
@@ -21,6 +25,7 @@ import (
 
 //Estrucutra de ficheros
 type FileHeader struct {
+	Username string
 	Filename string
 	Header   textproto.MIMEHeader
 	// contains filtered or unexported fields
@@ -173,18 +178,49 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//Comprueba que los directorios no existen
+func CreateDirIfNotExist(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
 
-	file, err := os.Create("./result")
-	if err != nil {
-		panic(err)
-	}
-	n, err := io.Copy(file, r.Body)
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println("method:", r.Method)
+	if r.Method == "GET" {
+		crutime := time.Now().Unix()
+		h := md5.New()
+		io.WriteString(h, strconv.FormatInt(crutime, 10))
+		token := fmt.Sprintf("%x", h.Sum(nil))
 
-	w.Write([]byte(fmt.Sprintf("%d bytes are recieved.\n", n)))
+		t, _ := template.ParseFiles("upload.gtpl")
+		t.Execute(w, token)
+	} else {
+		r.ParseMultipartForm(32 << 20)
+		file, handler, err := r.FormFile("uploadfile")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		fmt.Fprintf(w, "%v", handler.Header)
+		// Split on /.
+
+		result := strings.Split(handler.Filename, "/")
+		fmt.Println(r.FormValue("Username"))
+		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
+		f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+result[len(result)-1], os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer f.Close()
+		io.Copy(f, file)
+	}
 }
 
 func validarRegister(register string, password string, confirm string) bool {

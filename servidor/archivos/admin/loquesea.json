@@ -1,0 +1,256 @@
+PRIMERA RONDA
+
+{
+    "name": "onclick",
+    "sender": {
+        "properties": {
+            "type": "button",
+            "id": "buttonEnviar",
+            "class": "btn btn-primary btn-block ",
+            "onclick": "fire_event('onclick',this);",
+            "value": ""
+        }
+    },
+    "inputs": [
+        {
+            "properties": {
+                "type": "file",
+                "id": "idFile",
+                "onchange": "subirArchivo()",
+                "style": "display: none",
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf"
+            }
+        },
+        {
+            "properties": {
+                "type": "text",
+                "id": "archivo",
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf"
+            }
+        },
+        {
+            "properties": {
+                "type": "button",
+                "onclick": "document.getElementById('idFile').click();",
+                "value": "Seleccionar Archivo",
+                "id": "file-selector",
+                "class": "btn btn-primary btn-block"
+            }
+        }
+    ]
+}
+
+SEGUNDA RONDA
+
+{
+    "name": "onclick",
+    "sender": {
+        "properties": {
+            "type": "button",
+            "id": "buttonEnviar",
+            "class": "btn btn-primary btn-block ",
+            "onclick": "fire_event('onclick',this);",
+            "value": ""
+        }
+    },
+    "inputs": [
+        {
+            "properties": {
+                "value": "",
+                "type": "file",
+                "id": "idFile",
+                "onchange": "subirArchivo()",
+                "style": "display: none"
+            }
+        },
+        {
+            "properties": {
+                "type": "text",
+                "id": "archivo",
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf"
+            }
+        },
+        {
+            "properties": {
+                "onclick": "document.getElementById('idFile').click();",
+                "value": "Seleccionar Archivo",
+                "id": "file-selector",
+                "class": "btn btn-primary btn-block",
+                "type": "button"
+            }
+        }
+    ]
+}
+
+TERCERA RONDA
+
+{
+    "name": "onclick",
+    "sender": {
+        "properties": {
+            "type": "button",
+            "id": "buttonEnviar",
+            "class": "btn btn-primary btn-block ",
+            "onclick": "fire_event('onclick',this);",
+            "value": ""
+        }
+    },
+    "inputs": [
+        {
+            "properties": {
+                "onchange": "subirArchivo()",
+                "style": "display: none",
+                "value": "",
+                "type": "file",
+                "id": "idFile"
+            }
+        },
+        {
+            "properties": {
+                "type": "text",
+                "id": "archivo",
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf"
+            }
+        },
+        {
+            "properties": {
+                "type": "button",
+                "onclick": "document.getElementById('idFile').click();",
+                "value": "Seleccionar Archivo",
+                "id": "file-selector",
+                "class": "btn btn-primary btn-block"
+            }
+        }
+    ]
+}
+
+CUARTA RONDA
+
+{
+    "name": "onclick",
+    "sender": {
+        "properties": {
+            "type": "button",
+            "id": "buttonEnviar",
+            "class": "btn btn-primary btn-block ",
+            "onclick": "fire_event('onclick',this);",
+            "value": ""
+        }
+    },
+    "inputs": [
+        {
+            "properties": {
+                "style": "display: none",
+                "value": "",
+                "type": "file",
+                "id": "idFile",
+                "onchange": "subirArchivo()"
+            }
+        },
+        {
+            "properties": {
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf",
+                "type": "text",
+                "id": "archivo"
+            }
+        },
+        {
+            "properties": {
+                "class": "btn btn-primary btn-block",
+                "type": "button",
+                "onclick": "document.getElementById('idFile').click();",
+                "value": "Seleccionar Archivo",
+                "id": "file-selector"
+            }
+        }
+    ]
+}
+
+
+
+QUINTA RONDA
+
+{
+    "name": "onclick",
+    "sender": {
+        "properties": {
+            "type": "button",
+            "id": "buttonEnviar",
+            "class": "btn btn-primary btn-block ",
+            "onclick": "fire_event('onclick',this);",
+            "value": ""
+        }
+    },
+    "inputs": [
+        {
+            "properties": {
+                "id": "idFile",
+                "onchange": "subirArchivo()",
+                "style": "display: none",
+                "value": "",
+                "type": "file"
+            }
+        },
+        {
+            "properties": {
+                "type": "text",
+                "id": "archivo",
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf"
+            }
+        },
+        {
+            "properties": {
+                "onclick": "document.getElementById('idFile').click();",
+                "value": "Seleccionar Archivo",
+                "id": "file-selector",
+                "class": "btn btn-primary btn-block",
+                "type": "button"
+            }
+        }
+    ]
+}
+
+
+
+
+SEXTA RONDA
+
+{
+    "name": "onclick",
+    "sender": {
+        "properties": {
+            "type": "button",
+            "id": "buttonEnviar",
+            "class": "btn btn-primary btn-block ",
+            "onclick": "fire_event('onclick',this);",
+            "value": ""
+        }
+    },
+    "inputs": [
+        {
+            "properties": {
+                "type": "file",
+                "id": "idFile",
+                "onchange": "subirArchivo()",
+                "style": "display: none",
+                "value": ""
+            }
+        },
+        {
+            "properties": {
+                "type": "text",
+                "id": "archivo",
+                "value": "/Users/joseantoniocarbonell/Documents/Jose/captura.pdf"
+            }
+        },
+        {
+            "properties": {
+                "onclick": "document.getElementById('idFile').click();",
+                "value": "Seleccionar Archivo",
+                "id": "file-selector",
+                "class": "btn btn-primary btn-block",
+                "type": "button"
+            }
+        }
+    ]
+}

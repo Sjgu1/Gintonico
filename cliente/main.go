@@ -482,6 +482,8 @@ func encriptarScrypt(cadena string, seed string) string {
 func postFile(filename string, targetURL string) error {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
+	err := bodyWriter.WriteField("Username", login)
+	check(err)
 
 	// this step is very important
 	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
