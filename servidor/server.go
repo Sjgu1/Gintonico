@@ -212,6 +212,7 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 
 		result := strings.Split(handler.Filename, "/")
 		fmt.Println(r.FormValue("Username"))
+		CreateDirIfNotExist("./archivos/")
 		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
 		f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+result[len(result)-1], os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
