@@ -6,13 +6,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
-	"github.com/sqweek/dialog"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -66,8 +69,9 @@ func main() {
 		break
 	case "principal":
 		body.AddHTML(vistaPrincipal2(), nil)
+		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
 		body.Find("logout-link").OnEvent(gowd.OnClick, actualizarVista)
-		body.Find("file-selector").OnEvent(gowd.OnClick, seleccionarFichero)
+		//body.Find("file-selector").OnEvent(gowd.OnClick, seleccionarFichero)
 		cambiarVista("login")
 		break
 	}
@@ -201,7 +205,7 @@ func vistaPrincipal() string {
 	  </br>
 	  </br>
 	  </br>
-	  <button id="file-selector" type="button" class="btn btn-primary btn-md">Selecciona un fichero</button>
+	  <!--<button id="file-selector" type="button" class="btn btn-primary btn-md">Selecciona un fichero</button>-->
 	  </br>
 	  </br>
 	  </br>
@@ -254,7 +258,10 @@ func vistaPrincipal2() string {
 							<a href="#" class="file-control">Audio</a>
 							<a href="#" class="file-control">Images</a>
 							<div class="hr-line-dashed"></div>
-							<button id="file-selector" class="btn btn-primary btn-block">Sube un fichero</button>
+							<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
+							<input type="text" id="archivo" style="display: none" />
+							<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block"/>
+							<button type="button" id="buttonEnviar"  class="btn btn-primary btn-block " > Subir </button>
 							<!--<button  ype="button" class="btn btn-primary btn-md">Selecciona un fichero</button>-->
 							<div class="hr-line-dashed"></div>
 							<h5>Folders</h5>
@@ -395,6 +402,7 @@ func vistaPrincipal2() string {
 			</div>
 		</div>
 	</div>
+	<p id="texto"/>
 	</nav>`
 }
 
@@ -451,16 +459,13 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 }
 
 func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
-	//filename, err := dialog.File().Filter("Mp3 audio file", "mp3").Load()
-	//dialog.Message("%s", "Por favor, selecciona el fichero").Title("Dale calor!").Info()
-	file, err := dialog.File().Title("Save As").Filter("All Files", "*").Load()
-	//fmt.Println(file)
-	if err != nil && err.Error() == "Cancelled" {
-		//cancelada seleccion de fichero
-	} else {
-		check(err)
-		dialog.Message("Has seleccionado el fichero: %s", file).Title("Increíble!").Info()
-	}
+	//fmt.Println(body.Find("archivo").GetValue())
+	body.Find("texto").SetText("Hola que tal") //filename, err := dialog.File().Filter("Mp3 audio file", "mp3").Load()
+
+	targetURL := "https://localhost:8081/upload"
+	filename := body.Find("archivo").GetValue()
+	postFile(filename, targetURL)
+
 }
 
 // Devuelve el string de la cadena encriptada
@@ -472,4 +477,49 @@ func encriptarScrypt(cadena string, seed string) string {
 		log.Fatal(err)
 	}
 	return base64.StdEncoding.EncodeToString(dk)
+}
+
+func postFile(filename string, targetURL string) error {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+
+	// this step is very important
+	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
+	if err != nil {
+		fmt.Println("error writing to buffer")
+		return err
+	}
+
+	// open file handle
+	fh, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("error opening file")
+		return err
+	}
+	defer fh.Close()
+
+	//iocopy
+	_, err = io.Copy(fileWriter, fh)
+	if err != nil {
+		return err
+	}
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Post(targetURL, contentType, bodyBuf)
+	check(err)
+
+	defer resp.Body.Close()
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Println(resp.Status)
+	fmt.Println(string(respBody))
+	return nil
 }

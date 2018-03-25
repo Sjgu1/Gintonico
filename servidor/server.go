@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/textproto"
 	"os"
 	"os/signal"
 	"time"
@@ -17,6 +18,13 @@ import (
 	"github.com/kabukky/httpscerts"
 	"golang.org/x/crypto/scrypt"
 )
+
+//Estrucutra de ficheros
+type FileHeader struct {
+	Filename string
+	Header   textproto.MIMEHeader
+	// contains filtered or unexported fields
+}
 
 // respuesta del servidor
 type resp struct {
@@ -165,6 +173,20 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handlerUpload(w http.ResponseWriter, r *http.Request) {
+
+	file, err := os.Create("./result")
+	if err != nil {
+		panic(err)
+	}
+	n, err := io.Copy(file, r.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	w.Write([]byte(fmt.Sprintf("%d bytes are recieved.\n", n)))
+}
+
 func validarRegister(register string, password string, confirm string) bool {
 	//Las password no coinciden
 	if password != confirm || register == "" || password == "" {
@@ -263,6 +285,7 @@ func main() {
 	mux.Handle("/", http.HandlerFunc(handler))
 	mux.Handle("/login", http.HandlerFunc(handlerLogin))
 	mux.Handle("/register", http.HandlerFunc(handlerRegister))
+	mux.Handle("/upload", http.HandlerFunc(handlerUpload))
 
 	srv := &http.Server{Addr: ":8081", Handler: mux}
 
