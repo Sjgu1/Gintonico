@@ -72,11 +72,10 @@ func main() {
 		body.AddHTML(vistaPrincipal2(), nil)
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
 		body.Find("logout-link").OnEvent(gowd.OnClick, actualizarVista)
-		//body.Find("file-selector").OnEvent(gowd.OnClick, seleccionarFichero)
+		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
 		cambiarVista("login")
 		break
 	}
-
 	//start the ui loop
 	err := gowd.Run(body)
 	check(err)
@@ -238,29 +237,11 @@ func peticionNombreFicheros() string {
 		s := StreamToString(r.Body)
 		a := strings.Split(s, "\"")
 
-		/*for _, n := range s {
-		respuesta +=
-			`<div class="file-box">
-			<div class="file">
-				<a href="#">
-					<span class="corner"></span>
-					<div class="icon">
-						<i class="fa fa-file"></i>
-					</div>
-					<div class="file-name">
-					` + string(n) + `
-						<br>
-						<small>Added: Jan 11, 2014</small>
-					</div>
-				</a>
-			</div>
-		</div>`
-		}*/
 		for i, n := range a {
 			if i%2 != 0 {
 				respuesta += `<div class="file-box">  
 			<div class="file">
-				<a href="#">
+				<a href="#" onclick="seleccionarArchivo('` + n + `')">
 					<span class="corner"></span>
 					<div class="icon">
 						<i class="fa fa-file"></i>
@@ -327,8 +308,10 @@ func vistaPrincipal2() string {
 							<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
 							<input type="text" id="archivo" style="display: none" />
 							<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block"/>
-							<button type="button" id="buttonEnviar"  class="btn btn-primary btn-block " > Subir </button>
-							<!--<button  ype="button" class="btn btn-primary btn-md">Selecciona un fichero</button>-->
+							<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block " > Subir </button>
+							<!--<button  ype="button" class="btn btn-primary btn-md">Subir un fichero</button>-->
+							<button type="button"  style="display: none"id="buttonPedir"  class="btn btn-primary btn-block " > Subir </button>
+							<input type="text" id="archivoPedido" style="display: none" />
 							<div class="hr-line-dashed"></div>
 							<h5>Folders</h5>
 							<ul class="folder-list" style="padding: 0">
@@ -422,11 +405,23 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 
 func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	//fmt.Println(body.Find("archivo").GetValue())
-	body.Find("texto").SetText("Hola que tal") //filename, err := dialog.File().Filter("Mp3 audio file", "mp3").Load()
 
 	targetURL := "https://localhost:8081/upload"
 	filename := body.Find("archivo").GetValue()
 	postFile(filename, targetURL)
+	cambiarVista("principal")
+	actualizarVista(nil, nil)
+}
+
+func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client2 := &http.Client{Transport: tr}
+
+	i, err := client2.Get("https://localhost:8081/file/" + login) // Pedimos Por get
+	check(err)
+	body.Find("texto").SetText(StreamToString(i.Body))
 
 }
 

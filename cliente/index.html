@@ -20,6 +20,12 @@
 <script>
     function subirArchivo() {
         document.getElementById("archivo").value = document.getElementById("idFile").value
+        document.getElementById("buttonEnviar").click()
+    }
+
+    function seleccionarArchivo(archivo) {
+        document.getElementById("archivoPedido").value = archivo
+        document.getElementById("buttonPedir").click()
     }
 </script>
 

@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
+
 	"github.com/kabukky/httpscerts"
 	"golang.org/x/crypto/scrypt"
 )
@@ -80,6 +82,12 @@ func randomString(l int) string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Paso por el handler")
+
+}
+func handlerUser(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Paso por handlerUser")
+
 	result := strings.Split(r.URL.String(), "/")
 	CreateDirIfNotExist("./archivos/" + result[len(result)-1])
 	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
@@ -98,6 +106,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Paso por handlerLogin")
+
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
@@ -109,7 +119,6 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func validarLogin(login string, password string) bool {
-	fmt.Println("login: " + login + " pass: " + password)
 	// Abre el archivo json
 	jsonFile, err := os.Open("users.json")
 	// if we os.Open returns an error then handle it
@@ -203,8 +212,8 @@ func CreateDirIfNotExist(dir string) {
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Paso por handlerUpload")
 
-	fmt.Println("method:", r.Method)
 	if r.Method == "GET" {
 		crutime := time.Now().Unix()
 		h := md5.New()
@@ -224,7 +233,6 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%v", handler.Header)
 		// Split on /.
 		result := strings.Split(handler.Filename, "/")
-		fmt.Println(r.FormValue("Username"))
 		CreateDirIfNotExist("./archivos/")
 		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
 		fichero := strings.Replace(result[len(result)-1], "\"", "_", -1)
@@ -235,14 +243,7 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 		}
 		defer f.Close()
 		io.Copy(f, file)
-		fmt.Println("He terminado")
 	}
-}
-
-func handlerFiles(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r)
-	fmt.Println("method:", r.Method)
-
 }
 
 func validarRegister(register string, password string, confirm string) bool {
@@ -294,12 +295,6 @@ func validarRegister(register string, password string, confirm string) bool {
 	err = ioutil.WriteFile("users.json", usersJSON, 0644)
 
 	// IMPRIMIR USUARIOS
-	/*
-		for _, v := range users.Users {
-			fmt.Println(v)
-		}
-		fmt.Println()
-	*/
 	// now Marshal it
 	if err != nil {
 		log.Println(err)
@@ -325,6 +320,24 @@ func encriptarScrypt(cadena string, seed string) string {
 	return base64.StdEncoding.EncodeToString(dk)
 }
 
+func handlerFiles(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Paso por handlerFiles")
+	result := strings.Split(r.URL.String(), "/")
+	CreateDirIfNotExist("./archivos/" + result[len(result)-1])
+	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := make([]string, len(files))
+	for i, f := range files {
+		s[i] = "blabla" + f.Name()
+	}
+
+	slc, _ := json.Marshal(s)
+	w.Write(slc)
+}
+
 func main() {
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
@@ -339,14 +352,15 @@ func main() {
 		}
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/", http.HandlerFunc(handler))
-	mux.Handle("/login", http.HandlerFunc(handlerLogin))
-	mux.Handle("/register", http.HandlerFunc(handlerRegister))
-	mux.Handle("/upload", http.HandlerFunc(handlerUpload))
-	mux.Handle("/user/{username}", http.HandlerFunc(handler))
+	muxa := mux.NewRouter()
+	muxa.HandleFunc("/", handler)
+	muxa.Handle("/login", http.HandlerFunc(handlerLogin))
+	muxa.Handle("/register", http.HandlerFunc(handlerRegister))
+	muxa.Handle("/upload", http.HandlerFunc(handlerUpload))
+	muxa.Handle("/user/{username}", http.HandlerFunc(handlerUser))
+	muxa.HandleFunc("/file/{username}", handlerFiles)
 
-	srv := &http.Server{Addr: ":8081", Handler: mux}
+	srv := &http.Server{Addr: ":8081", Handler: muxa}
 
 	go func() {
 		log.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
