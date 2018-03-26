@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
@@ -212,6 +213,71 @@ func vistaPrincipal() string {
 	</div>
   </nav>`
 }
+func StreamToByte(stream io.Reader) []byte {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(stream)
+	return buf.Bytes()
+}
+func StreamToString(stream io.Reader) string {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(stream)
+	return buf.String()
+}
+
+func peticionNombreFicheros() string {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	respuesta := ""
+	if login != "" {
+		r, err := client.Get("https://localhost:8081/user/" + login) // Pedimos Por get
+		check(err)
+
+		//` `
+		s := StreamToString(r.Body)
+		a := strings.Split(s, "\"")
+
+		/*for _, n := range s {
+		respuesta +=
+			`<div class="file-box">
+			<div class="file">
+				<a href="#">
+					<span class="corner"></span>
+					<div class="icon">
+						<i class="fa fa-file"></i>
+					</div>
+					<div class="file-name">
+					` + string(n) + `
+						<br>
+						<small>Added: Jan 11, 2014</small>
+					</div>
+				</a>
+			</div>
+		</div>`
+		}*/
+		for i, n := range a {
+			if i%2 != 0 {
+				respuesta += `<div class="file-box">  
+			<div class="file">
+				<a href="#">
+					<span class="corner"></span>
+					<div class="icon">
+						<i class="fa fa-file"></i>
+					</div>
+					<div class="file-name">
+					` + n + `
+						<br>
+					</div>
+				</a>
+			</div>
+		</div>`
+			}
+		}
+	}
+
+	return respuesta
+}
 
 func vistaPrincipal2() string {
 	return `<nav class="navbar navbar-default">
@@ -292,111 +358,7 @@ func vistaPrincipal2() string {
 			<div class="col-md-9">
 				<div class="row" style="margin: 0 auto;">
 					<div class="col-lg-12">
-						<div class="file-box">
-							<div class="file">
-								<a href="#">
-									<span class="corner"></span>
-									<div class="icon">
-										<i class="fa fa-file"></i>
-									</div>
-									<div class="file-name">
-										Document_2014.doc
-										<br>
-										<small>Added: Jan 11, 2014</small>
-									</div>
-								</a>
-							</div>
-						</div>
-						<div class="file-box">
-							<div class="file">
-								<a href="#">
-									<span class="corner"></span>
-									<div class="image">
-										<img alt="image" class="img-responsive" src="https://lorempixel.com/400/300/nature/1">
-									</div>
-									<div class="file-name">
-										Italy street.jpg
-										<br>
-										<small>Added: Jan 6, 2014</small>
-									</div>
-								</a>
-							</div>
-						</div>
-						<div class="file-box">
-							<div class="file">
-								<a href="#">
-									<span class="corner"></span>
-									<div class="image">
-										<img alt="image" class="img-responsive" src="https://lorempixel.com/400/300/nature/2">
-									</div>
-									<div class="file-name">
-										My feel.png
-										<br>
-										<small>Added: Jan 7, 2014</small>
-									</div>
-								</a>
-							</div>
-						</div>
-						<div class="file-box">
-							<div class="file">
-								<a href="#">
-									<span class="corner"></span>
-									<div class="icon">
-										<i class="fa fa-music"></i>
-									</div>
-									<div class="file-name">
-										Michal Jackson.mp3
-										<br>
-										<small>Added: Jan 22, 2014</small>
-									</div>
-								</a>
-							</div>
-						</div>
-						<div class="file-box">
-							<div class="file">
-								<a href="#">
-									<span class="corner"></span>
-									<div class="image">
-										<img alt="image" class="img-responsive" src="https://lorempixel.com/400/300/nature/3">
-									</div>
-									<div class="file-name">
-										Document_2014.doc
-										<br>
-										<small>Added: Fab 11, 2014</small>
-									</div>
-								</a>
-							</div>
-						</div>
-						<div class="file-box">
-							<div class="file">
-								<a href="#">
-									<span class="corner"></span>
-									<div class="icon">
-										<i class="img-responsive fa fa-film"></i>
-									</div>
-									<div class="file-name">
-										Monica's birthday.mpg4
-										<br>
-										<small>Added: Fab 18, 2014</small>
-									</div>
-								</a>
-							</div>
-						</div>
-						<div class="file-box">
-							<a href="#">
-								<div class="file">
-									<span class="corner"></span>
-									<div class="icon">
-										<i class="fa fa-bar-chart-o"></i>
-									</div>
-									<div class="file-name">
-										Annual report 2014.xls
-										<br>
-										<small>Added: Fab 22, 2014</small>
-									</div>
-								</div>
-							</a>
-						</div>
+					` + peticionNombreFicheros() + `
 					</div>
 				</div>
 			</div>

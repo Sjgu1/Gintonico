@@ -80,7 +80,21 @@ func randomString(l int) string {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hi theresfsdgsfg!")
+	result := strings.Split(r.URL.String(), "/")
+	CreateDirIfNotExist("./archivos/" + result[len(result)-1])
+	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s := make([]string, len(files))
+	for i, f := range files {
+		s[i] = f.Name()
+	}
+
+	slc, _ := json.Marshal(s)
+	w.Write(slc)
+
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -209,19 +223,26 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		fmt.Fprintf(w, "%v", handler.Header)
 		// Split on /.
-
 		result := strings.Split(handler.Filename, "/")
 		fmt.Println(r.FormValue("Username"))
 		CreateDirIfNotExist("./archivos/")
 		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
-		f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+result[len(result)-1], os.O_WRONLY|os.O_CREATE, 0666)
+		fichero := strings.Replace(result[len(result)-1], "\"", "_", -1)
+		f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+fichero, os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 		defer f.Close()
 		io.Copy(f, file)
+		fmt.Println("He terminado")
 	}
+}
+
+func handlerFiles(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r)
+	fmt.Println("method:", r.Method)
+
 }
 
 func validarRegister(register string, password string, confirm string) bool {
@@ -323,6 +344,7 @@ func main() {
 	mux.Handle("/login", http.HandlerFunc(handlerLogin))
 	mux.Handle("/register", http.HandlerFunc(handlerRegister))
 	mux.Handle("/upload", http.HandlerFunc(handlerUpload))
+	mux.Handle("/user/{username}", http.HandlerFunc(handler))
 
 	srv := &http.Server{Addr: ":8081", Handler: mux}
 
