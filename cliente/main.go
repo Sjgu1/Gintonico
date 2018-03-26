@@ -417,11 +417,24 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-	client2 := &http.Client{Transport: tr}
+	client := &http.Client{Transport: tr}
 
-	i, err := client2.Get("https://localhost:8081/file/" + login) // Pedimos Por get
+	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+body.Find("archivoPedido").GetValue(), "application/json", nil) // Pedimos Por get
 	check(err)
-	body.Find("texto").SetText(StreamToString(i.Body))
+
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	} else {
+		defer response.Body.Close()
+		contents, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Printf("%s", err)
+			os.Exit(1)
+		}
+		//fmt.Printf("%s\n", string(contents))
+		body.Find("texto").SetText(string(contents))
+	}
 
 }
 

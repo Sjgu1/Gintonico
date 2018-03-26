@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/base64"
@@ -13,6 +14,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -20,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/h2non/filetype"
 
 	"github.com/kabukky/httpscerts"
 	"golang.org/x/crypto/scrypt"
@@ -86,9 +89,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 }
 func handlerUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Paso por handlerUser")
+	//fmt.Println("Paso por handlerUser")
 
-	result := strings.Split(r.URL.String(), "/")
+	u, err := url.Parse(r.URL.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+	result := strings.Split(u.Path, "/")
 	CreateDirIfNotExist("./archivos/" + result[len(result)-1])
 	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
 	if err != nil {
@@ -106,7 +113,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Paso por handlerLogin")
+	//fmt.Println("Paso por handlerLogin")
 
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
@@ -212,7 +219,7 @@ func CreateDirIfNotExist(dir string) {
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Paso por handlerUpload")
+	//fmt.Println("Paso por handlerUpload")
 
 	if r.Method == "GET" {
 		crutime := time.Now().Unix()
@@ -321,21 +328,44 @@ func encriptarScrypt(cadena string, seed string) string {
 }
 
 func handlerFiles(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Paso por handlerFiles")
-	result := strings.Split(r.URL.String(), "/")
-	CreateDirIfNotExist("./archivos/" + result[len(result)-1])
-	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
+	//fmt.Println("Paso por handlerFiles")
+
+	u, err := url.Parse(r.URL.String())
 	if err != nil {
 		log.Fatal(err)
 	}
+	result := strings.Split(u.Path, "/")
+	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + result[len(result)-1]); err == nil {
 
-	s := make([]string, len(files))
-	for i, f := range files {
-		s[i] = "blabla" + f.Name()
+		// grab the generated receipt.pdf file and stream it to browser
+		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + result[len(result)-1])
+
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		kind, unknown := filetype.Match(streamBytes)
+		if unknown != nil {
+			fmt.Printf("Unknown: %s", unknown)
+			return
+		}
+
+		fmt.Printf("File type: %s. MIME: %s\n", kind.Extension, kind.MIME.Value)
+		b := bytes.NewBuffer(streamBytes)
+
+		// stream straight to client(browser)
+
+		w.Header().Set("Content-type", kind.MIME.Value)
+
+		if _, err := b.WriteTo(w); err != nil { // <----- here!
+			fmt.Fprintf(w, "%s", err)
+		}
+
+	} else {
+		response(w, true, "El archivo No Existe")
 	}
 
-	slc, _ := json.Marshal(s)
-	w.Write(slc)
 }
 
 func main() {
@@ -358,7 +388,7 @@ func main() {
 	muxa.Handle("/register", http.HandlerFunc(handlerRegister))
 	muxa.Handle("/upload", http.HandlerFunc(handlerUpload))
 	muxa.Handle("/user/{username}", http.HandlerFunc(handlerUser))
-	muxa.HandleFunc("/file/{username}", handlerFiles)
+	muxa.HandleFunc("/user/{username}/file/{filename}", handlerFiles)
 
 	srv := &http.Server{Addr: ":8081", Handler: muxa}
 
