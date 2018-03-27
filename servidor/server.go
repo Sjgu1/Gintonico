@@ -88,6 +88,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Paso por el handler")
 
 }
+
 func handlerUser(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerUser")
 
@@ -239,7 +240,8 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		fmt.Fprintf(w, "%v", handler.Header)
 		// Split on /.
-		result := strings.Split(handler.Filename, "/")
+		resultx := strings.Replace(handler.Filename, "\\", "/", -1)
+		result := strings.Split(resultx, "/")
 		CreateDirIfNotExist("./archivos/")
 		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
 		fichero := strings.Replace(result[len(result)-1], "\"", "_", -1)
