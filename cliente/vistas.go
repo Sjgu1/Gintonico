@@ -137,7 +137,8 @@ func vistaPrincipal() string {
 							<a href="#" class="file-control">Images</a>
 							<div class="hr-line-dashed"></div>
 							<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
-							<input type="text" id="archivo" style="display: none" />
+							<input type="text" id="route" style="display: none" />
+							<input type="text" id="filename" style="display: none" />
 							<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block"/>
 							<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block " > Subir </button>
 							<!--<button  ype="button" class="btn btn-primary btn-md">Subir un fichero</button>-->

@@ -81,55 +81,6 @@ func main() {
 	check(err)
 }
 
-func StreamToByte(stream io.Reader) []byte {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(stream)
-	return buf.Bytes()
-}
-
-func StreamToString(stream io.Reader) string {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(stream)
-	return buf.String()
-}
-
-func peticionNombreFicheros() string {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-	respuesta := ""
-	if login != "" {
-		r, err := client.Get("https://localhost:8081/user/" + login) // Pedimos Por get
-		check(err)
-
-		//` `
-		s := StreamToString(r.Body)
-		a := strings.Split(s, "\"")
-
-		for i, n := range a {
-			if i%2 != 0 {
-				respuesta += `<div class="file-box">  
-			<div class="file">
-				<a href="#" onclick="seleccionarArchivo('` + n + `')">
-					<span class="corner"></span>
-					<div class="icon">
-						<i class="fa fa-file"></i>
-					</div>
-					<div class="file-name">
-					` + n + `
-						<br>
-					</div>
-				</a>
-			</div>
-		</div>`
-			}
-		}
-	}
-
-	return respuesta
-}
-
 func actualizarVista(sender *gowd.Element, event *gowd.EventElement) { //por si necesitamos hacer algo especial a la hora de actualizar
 	main()
 }
@@ -186,49 +137,14 @@ func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	//fmt.Println(body.Find("archivo").GetValue())
 
 	targetURL := "https://localhost:8081/upload"
-	filename := body.Find("archivo").GetValue()
-	postFile(filename, targetURL)
+	ruta := body.Find("route").GetValue()
+	filename := body.Find("filename").GetValue()
+	postFile(ruta, encodeB64(filename), targetURL)
 	cambiarVista("principal")
 	actualizarVista(nil, nil)
 }
 
-func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+body.Find("archivoPedido").GetValue(), "application/json", nil) // Pedimos Por get
-	check(err)
-
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	} else {
-		defer response.Body.Close()
-		contents, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			fmt.Printf("%s", err)
-			os.Exit(1)
-		}
-		//fmt.Printf("%s\n", string(contents))
-		body.Find("texto").SetText(string(contents))
-	}
-
-}
-
-// Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string, seed string) string {
-	salt := []byte(seed)
-
-	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return base64.StdEncoding.EncodeToString(dk)
-}
-
-func postFile(filename string, targetURL string) error {
+func postFile(route string, filename string, targetURL string) error {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
 	err := bodyWriter.WriteField("Username", login)
@@ -242,7 +158,7 @@ func postFile(filename string, targetURL string) error {
 	}
 
 	// open file handle
-	fh, err := os.Open(filename)
+	fh, err := os.Open(route)
 	if err != nil {
 		fmt.Println("error opening file")
 		return err
@@ -273,4 +189,102 @@ func postFile(filename string, targetURL string) error {
 	fmt.Println(resp.Status)
 	fmt.Println(string(respBody))
 	return nil
+}
+
+func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	filename := encodeB64(body.Find("archivoPedido").GetValue())
+
+	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+filename, "application/json", nil) // Pedimos Por get
+	check(err)
+
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	} else {
+		defer response.Body.Close()
+		contents, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Printf("%s", err)
+			os.Exit(1)
+		}
+		//fmt.Printf("%s\n", string(contents))
+		body.Find("texto").SetText(string(contents))
+	}
+
+}
+
+func peticionNombreFicheros() string {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	respuesta := ""
+	if login != "" {
+		r, err := client.Get("https://localhost:8081/user/" + login) // Pedimos Por get
+		check(err)
+
+		//` `
+		s := streamToString(r.Body)
+		a := strings.Split(s, "\"")
+
+		for i, n := range a {
+			if i%2 != 0 {
+				respuesta += `<div class="file-box">  
+			<div class="file">
+				<a href="#" onclick="seleccionarArchivo('` + decodeB64(n) + `')">
+					<span class="corner"></span>
+					<div class="icon">
+						<i class="fa fa-file"></i>
+					</div>
+					<div class="file-name">
+					` + decodeB64(n) + `
+						<br>
+					</div>
+				</a>
+			</div>
+		</div>`
+			}
+		}
+	}
+
+	return respuesta
+}
+
+func streamToByte(stream io.Reader) []byte {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(stream)
+	return buf.Bytes()
+}
+
+func streamToString(stream io.Reader) string {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(stream)
+	return buf.String()
+}
+
+// Devuelve el string de la cadena encriptada
+func encriptarScrypt(cadena string, seed string) string {
+	salt := []byte(seed)
+
+	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return base64.StdEncoding.EncodeToString(dk)
+}
+
+func encodeB64(cadena string) string {
+	//StdEncoding
+	return base64.URLEncoding.EncodeToString([]byte(cadena))
+}
+
+func decodeB64(cadena string) string {
+	//StdEncoding
+	decode, _ := base64.URLEncoding.DecodeString(cadena)
+	return string(decode[:])
 }

@@ -19,7 +19,8 @@
 
 <script>
     function subirArchivo() {
-        document.getElementById("archivo").value = document.getElementById("idFile").value
+        document.getElementById("route").value = document.getElementById("idFile").value
+        document.getElementById("filename").value = document.getElementById("idFile").files[0]['name'];
         document.getElementById("buttonEnviar").click()
     }
 

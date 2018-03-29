@@ -84,6 +84,17 @@ func randomString(l int) string {
 	return string(bytes)
 }
 
+func encodeB64(cadena string) string {
+	//StdEncoding
+	return base64.URLEncoding.EncodeToString([]byte(cadena))
+}
+
+func decodeB64(cadena string) string {
+	//StdEncoding
+	decode, _ := base64.URLEncoding.DecodeString(cadena)
+	return string(decode[:])
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Paso por el handler")
 
@@ -105,12 +116,11 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 
 	s := make([]string, len(files))
 	for i, f := range files {
-		s[i] = f.Name()
+		s[i] = encodeB64(f.Name())
 	}
 
 	slc, _ := json.Marshal(s)
 	w.Write(slc)
-
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -240,11 +250,10 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		fmt.Fprintf(w, "%v", handler.Header)
 		// Split on /.
-		resultx := strings.Replace(handler.Filename, "\\", "/", -1)
-		result := strings.Split(resultx, "/")
+		fichero := decodeB64(handler.Filename)
+		fmt.Println(fichero)
 		CreateDirIfNotExist("./archivos/")
 		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
-		fichero := strings.Replace(result[len(result)-1], "\"", "_", -1)
 		f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+fichero, os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
 			fmt.Println(err)
@@ -337,10 +346,11 @@ func handlerFiles(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	result := strings.Split(u.Path, "/")
-	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + result[len(result)-1]); err == nil {
+	fmt.Println(result)
+	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + decodeB64(result[len(result)-1])); err == nil {
 
 		// grab the generated receipt.pdf file and stream it to browser
-		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + result[len(result)-1])
+		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + decodeB64(result[len(result)-1]))
 
 		if err != nil {
 			fmt.Println(err)
