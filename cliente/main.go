@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -152,24 +151,16 @@ func postFile(route string, filename string, targetURL string) error {
 
 	// this step is very important
 	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
-	if err != nil {
-		fmt.Println("error writing to buffer")
-		return err
-	}
+	check(err)
 
 	// open file handle
 	fh, err := os.Open(route)
-	if err != nil {
-		fmt.Println("error opening file")
-		return err
-	}
+	check(err)
 	defer fh.Close()
 
 	//iocopy
 	_, err = io.Copy(fileWriter, fh)
-	if err != nil {
-		return err
-	}
+	check(err)
 
 	contentType := bodyWriter.FormDataContentType()
 	bodyWriter.Close()
@@ -183,9 +174,7 @@ func postFile(route string, filename string, targetURL string) error {
 
 	defer resp.Body.Close()
 	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
+	check(err)
 	fmt.Println(resp.Status)
 	fmt.Println(string(respBody))
 	return nil
@@ -202,19 +191,11 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+filename, "application/json", nil) // Pedimos Por get
 	check(err)
 
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	} else {
-		defer response.Body.Close()
-		contents, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			fmt.Printf("%s", err)
-			os.Exit(1)
-		}
-		//fmt.Printf("%s\n", string(contents))
-		body.Find("texto").SetText(string(contents))
-	}
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	check(err)
+	//fmt.Printf("%s\n", string(contents))
+	body.Find("texto").SetText(string(contents))
 
 }
 
@@ -272,9 +253,7 @@ func encriptarScrypt(cadena string, seed string) string {
 	salt := []byte(seed)
 
 	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	return base64.StdEncoding.EncodeToString(dk)
 }
 
