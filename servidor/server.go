@@ -3,21 +3,15 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,16 +19,7 @@ import (
 	"github.com/h2non/filetype"
 
 	"github.com/kabukky/httpscerts"
-	"golang.org/x/crypto/scrypt"
 )
-
-//Estrucutra de ficheros
-type FileHeader struct {
-	Username string
-	Filename string
-	Header   textproto.MIMEHeader
-	// contains filtered or unexported fields
-}
 
 // respuesta del servidor
 type resp struct {
@@ -54,50 +39,16 @@ type User struct {
 	Salt     string `json:"salt"`
 }
 
-// función para comprobar errores (ahorra escritura)
-func chk(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 // función para escribir una respuesta del servidor
 func response(w io.Writer, ok bool, msg string) {
 	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
 	rJSON, err := json.Marshal(&r) // codificamos en JSON
-	chk(err)                       // comprobamos error
+	check(err)                     // comprobamos error
 	w.Write(rJSON)                 // escribimos el JSON resultante
-}
-
-// Int Aleatorio
-func randInt(min int, max int) int {
-	return min + rand.Intn(max-min)
-}
-
-// String Aleatorio
-func randomString(l int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
-	bytes := make([]byte, l)
-	for i := 0; i < l; i++ {
-		bytes[i] = byte(randInt(65, 90))
-	}
-	return string(bytes)
-}
-
-func encodeB64(cadena string) string {
-	//StdEncoding
-	return base64.URLEncoding.EncodeToString([]byte(cadena))
-}
-
-func decodeB64(cadena string) string {
-	//StdEncoding
-	decode, _ := base64.URLEncoding.DecodeString(cadena)
-	return string(decode[:])
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Paso por el handler")
-
 }
 
 func handlerUser(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +59,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	result := strings.Split(u.Path, "/")
-	CreateDirIfNotExist("./archivos/" + result[len(result)-1])
+	createDirIfNotExist("./archivos/" + result[len(result)-1])
 	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
 	if err != nil {
 		log.Fatal(err)
@@ -220,7 +171,7 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 //Comprueba que los directorios no existen
-func CreateDirIfNotExist(dir string) {
+func createDirIfNotExist(dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, 0755)
 		if err != nil {
@@ -232,36 +183,27 @@ func CreateDirIfNotExist(dir string) {
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerUpload")
 
-	if r.Method == "GET" {
-		crutime := time.Now().Unix()
-		h := md5.New()
-		io.WriteString(h, strconv.FormatInt(crutime, 10))
-		token := fmt.Sprintf("%x", h.Sum(nil))
-
-		t, _ := template.ParseFiles("upload.gtpl")
-		t.Execute(w, token)
-	} else {
-		r.ParseMultipartForm(32 << 20)
-		file, handler, err := r.FormFile("uploadfile")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer file.Close()
-		fmt.Fprintf(w, "%v", handler.Header)
-		// Split on /.
-		fichero := decodeB64(handler.Filename)
-		fmt.Println(fichero)
-		CreateDirIfNotExist("./archivos/")
-		CreateDirIfNotExist("./archivos/" + r.FormValue("Username"))
-		f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+fichero, os.O_WRONLY|os.O_CREATE, 0666)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer f.Close()
-		io.Copy(f, file)
+	r.ParseMultipartForm(32 << 20)
+	file, handler, err := r.FormFile("uploadfile")
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
+	defer file.Close()
+	fmt.Fprintf(w, "%v", handler.Header)
+	// Split on /.
+	fichero := decodeB64(handler.Filename)
+	fmt.Println(fichero)
+	createDirIfNotExist("./archivos/")
+	createDirIfNotExist("./archivos/" + r.FormValue("Username"))
+	f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+fichero, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer f.Close()
+	io.Copy(f, file)
+
 }
 
 func validarRegister(register string, password string, confirm string) bool {
@@ -325,17 +267,6 @@ func validarRegister(register string, password string, confirm string) bool {
 func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 	// Redirect the incoming HTTP request. Note that "127.0.0.1:8081" will only work if you are accessing the server from your local machine.
 	http.Redirect(w, r, "https://127.0.0.1:8081"+r.RequestURI, http.StatusMovedPermanently)
-}
-
-// Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string, seed string) string {
-	salt := []byte(seed)
-
-	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return base64.StdEncoding.EncodeToString(dk)
 }
 
 func handlerFiles(w http.ResponseWriter, r *http.Request) {

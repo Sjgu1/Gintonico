@@ -178,7 +178,8 @@ func vistaPrincipal() string {
 				</div>
 			</div>
 		</div>
+		<p id="texto"/>
 	</div>
-	<p id="texto"/>
+	
 	</nav>`
 }

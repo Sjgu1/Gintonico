@@ -3,20 +3,16 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
-	"golang.org/x/crypto/scrypt"
 )
 
 var body *gowd.Element
@@ -26,13 +22,6 @@ var login = ""
 type resp struct {
 	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
 	Msg string `json:"msg"` // mensaje adicional
-}
-
-// función para comprobar errores (ahorra escritura)
-func check(e error) {
-	if e != nil {
-		fmt.Println(e.Error())
-	}
 }
 
 func sendServerPetition(data map[string][]string, route string) *http.Response {
@@ -138,46 +127,41 @@ func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	targetURL := "https://localhost:8081/upload"
 	ruta := body.Find("route").GetValue()
 	filename := body.Find("filename").GetValue()
-	postFile(ruta, encodeB64(filename), targetURL)
-	cambiarVista("principal")
-	actualizarVista(nil, nil)
+	enviarFichero(ruta, encodeB64(filename), targetURL)
+	//cambiarVista("principal")
+	//actualizarVista(nil, nil)
 }
 
-func postFile(route string, filename string, targetURL string) error {
-	bodyBuf := &bytes.Buffer{}
-	bodyWriter := multipart.NewWriter(bodyBuf)
-	err := bodyWriter.WriteField("Username", login)
+func enviarFichero(ruta string, filename string, targetURL string) {
+	f, err := os.Open(ruta)
 	check(err)
-
-	// this step is very important
-	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
+	defer f.Close()
+	bytes := make([]byte, 1024*1024*4) //byte -> kb -> mb
+	bytesLeidos, err := f.Read(bytes)
 	check(err)
-
-	// open file handle
-	fh, err := os.Open(route)
-	check(err)
-	defer fh.Close()
-
-	//iocopy
-	_, err = io.Copy(fileWriter, fh)
-	check(err)
-
-	contentType := bodyWriter.FormDataContentType()
-	bodyWriter.Close()
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	contador := 0
+	contadorBytes := bytesLeidos
+	texto := strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
+	body.Find("texto").SetText(texto)
+	enviarParteFichero(contador, bytes, bytesLeidos)
+	for bytesLeidos > 0 {
+		bytesLeidos, err = f.ReadAt(bytes, int64(contadorBytes))
+		check(err)
+		contador++
+		contadorBytes += bytesLeidos
+		//body.Find("texto").SetText(strconv.Itoa(bytesLeidos))
+		if bytesLeidos > 0 {
+			texto += strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
+			enviarParteFichero(contador, bytes, bytesLeidos)
+		}
 	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Post(targetURL, contentType, bodyBuf)
-	check(err)
 
-	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
-	check(err)
-	fmt.Println(resp.Status)
-	fmt.Println(string(respBody))
-	return nil
+	body.Find("texto").SetText(string(bytes))
+}
+
+func enviarParteFichero(contador int, data []byte, size int) {
+	//preparar peticion
+	//hash := hashSHA256(data)
 }
 
 func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
@@ -196,7 +180,6 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	check(err)
 	//fmt.Printf("%s\n", string(contents))
 	body.Find("texto").SetText(string(contents))
-
 }
 
 func peticionNombreFicheros() string {
@@ -234,36 +217,4 @@ func peticionNombreFicheros() string {
 	}
 
 	return respuesta
-}
-
-func streamToByte(stream io.Reader) []byte {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(stream)
-	return buf.Bytes()
-}
-
-func streamToString(stream io.Reader) string {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(stream)
-	return buf.String()
-}
-
-// Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string, seed string) string {
-	salt := []byte(seed)
-
-	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
-	check(err)
-	return base64.StdEncoding.EncodeToString(dk)
-}
-
-func encodeB64(cadena string) string {
-	//StdEncoding
-	return base64.URLEncoding.EncodeToString([]byte(cadena))
-}
-
-func decodeB64(cadena string) string {
-	//StdEncoding
-	decode, _ := base64.URLEncoding.DecodeString(cadena)
-	return string(decode[:])
 }
