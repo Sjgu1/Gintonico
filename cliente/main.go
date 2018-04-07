@@ -133,14 +133,13 @@ func enviarFichero(ruta string, filename string) {
 	bytesLeidos, err := f.Read(bytes)
 	check(err)
 
-	if bytesLeidos > 0 && bytesLeidos < bytesTam { //solo hay una parte
-		bytes = bytes[:bytesLeidos]
+	if bytesLeidos > 0 && bytesLeidos < bytesTam { //si solo hay una parte
+		bytes = bytes[:bytesLeidos] // para que no ocupe 4mb siempre
 	}
 
 	contador := 0
 	contadorBytes := bytesLeidos
 	texto := strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
-	body.Find("texto").SetText(texto)
 	enviarParteFichero(contador, bytes, bytesLeidos, checkHashURL, filename)
 
 	for bytesLeidos > 0 {
@@ -150,7 +149,7 @@ func enviarFichero(ruta string, filename string) {
 		contadorBytes += bytesLeidos
 		if bytesLeidos > 0 {
 			if bytesLeidos < bytesTam { //ultima parte
-				bytes = bytes[:bytesLeidos]
+				bytes = bytes[:bytesLeidos] // para que no ocupe 4mb siempre
 			}
 			texto += strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
 			enviarParteFichero(contador, bytes, bytesLeidos, checkHashURL, filename)

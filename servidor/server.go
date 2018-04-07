@@ -48,31 +48,13 @@ func response(w io.Writer, ok bool, msg string) {
 	w.Write(rJSON)                 // escribimos el JSON resultante
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Paso por el handler")
+func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
+	// Redirect the incoming HTTP request. Note that "127.0.0.1:8081" will only work if you are accessing the server from your local machine.
+	http.Redirect(w, r, "https://127.0.0.1:8081"+r.RequestURI, http.StatusMovedPermanently)
 }
 
-func handlerUser(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("Paso por handlerUser")
-
-	u, err := url.Parse(r.URL.String())
-	if err != nil {
-		log.Fatal(err)
-	}
-	result := strings.Split(u.Path, "/")
-	createDirIfNotExist("./archivos/" + result[len(result)-1])
-	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s := make([]string, len(files))
-	for i, f := range files {
-		s[i] = encodeURLB64(f.Name())
-	}
-
-	slc, _ := json.Marshal(s)
-	w.Write(slc)
+func handler(w http.ResponseWriter, r *http.Request) {
+	response(w, true, "Bienvenido a Gintónico")
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
@@ -100,9 +82,7 @@ func validarLogin(login string, password string) bool {
 		// create file if not exists
 		if os.IsNotExist(err) {
 			var file, err = os.Create("users.json")
-			if err != nil {
-				fmt.Println(err)
-			}
+			check(err)
 			defer file.Close()
 		}
 
@@ -131,35 +111,6 @@ func validarLogin(login string, password string) bool {
 
 }
 
-func comprobarExisteUsuario(usuario string) bool {
-	// Abre el archivo json
-	jsonFile, err := os.Open("users.json")
-	// if we os.Open returns an error then handle it
-	if err != nil {
-		fmt.Println(err)
-	}
-	// defer the closing of our jsonFile so that we can parse it later on
-	defer jsonFile.Close()
-
-	// read our opened xmlFile as a byte array.
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	// we initialize our Users array
-	var users Users
-
-	// we unmarshal our byteArray which contains our
-	// jsonFile's content into 'users' which we defined above
-	json.Unmarshal(byteValue, &users)
-
-	// Comprueba si algun usuario coincide con el del login
-	for i := 0; i < len(users.Users); i++ {
-		if usuario == users.Users[i].User {
-			return true
-		}
-	}
-	return false
-}
-
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
@@ -169,53 +120,6 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	} else {
 		response(w, false, "Error al registrar")
 	}
-}
-
-func handlerUpload(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("Paso por handlerUpload")
-
-	r.ParseMultipartForm(32 << 20)
-	file, handler, err := r.FormFile("uploadfile")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer file.Close()
-	fmt.Fprintf(w, "%v", handler.Header)
-	// Split on /.
-	fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
-	fmt.Println(fichero)
-	createDirIfNotExist("./archivos/")
-	createDirIfNotExist("./archivos/" + r.FormValue("Username"))
-	f, err := os.OpenFile("./archivos/"+r.FormValue("Username")+"/"+fichero, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer f.Close()
-	io.Copy(f, file)
-}
-
-func handlerHash(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("entro handlerHash")
-	r.ParseForm()                                // es necesario parsear el formulario
-	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
-
-	contador, _ := strconv.Atoi(r.Form.Get("cont"))  // numero del orden de la parte del fichero
-	hash := r.Form.Get("hash")                       // hash de la parte del fichero
-	size, _ := strconv.Atoi(r.Form.Get("size"))      // tamaño de la parte del fichero
-	user := r.Form.Get("user")                       // usuario que sube el fichero
-	filename := decodeURLB64(r.Form.Get("filename")) // nombre del fichero original
-
-	comprobar := comprobarHash(contador, hash, size, user, filename)
-	fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
-	response(w, comprobar, "Hash comprobado")
-}
-
-func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
-	//buscar en la base de datos, si ya existe devolver true, si no existe false
-	//además si ya existe, hay que asociar ese hash existente con el usuario y to eso
-	return false
 }
 
 func validarRegister(register string, password string, confirm string) bool {
@@ -239,10 +143,7 @@ func validarRegister(register string, password string, confirm string) bool {
 		// create file if not exists
 		if os.IsNotExist(err) {
 			var file, err = os.Create("users.json")
-			if err != nil {
-				fmt.Println(err)
-				return false
-			}
+			check(err)
 			defer file.Close()
 		}
 	}
@@ -268,37 +169,116 @@ func validarRegister(register string, password string, confirm string) bool {
 
 	// IMPRIMIR USUARIOS
 	// now Marshal it
-	if err != nil {
-		log.Println(err)
-		return false
-	}
+	check(err)
 
 	return true
 }
 
-func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
-	// Redirect the incoming HTTP request. Note that "127.0.0.1:8081" will only work if you are accessing the server from your local machine.
-	http.Redirect(w, r, "https://127.0.0.1:8081"+r.RequestURI, http.StatusMovedPermanently)
+func comprobarExisteUsuario(usuario string) bool {
+	// Abre el archivo json
+	jsonFile, err := os.Open("users.json")
+	check(err)
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Users array
+	var users Users
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &users)
+
+	// Comprueba si algun usuario coincide con el del login
+	for i := 0; i < len(users.Users); i++ {
+		if usuario == users.Users[i].User {
+			return true
+		}
+	}
+	return false
 }
 
-func handlerFiles(w http.ResponseWriter, r *http.Request) {
+func handlerHash(w http.ResponseWriter, r *http.Request) {
+	//fmt.Println("entro handlerHash")
+	r.ParseForm()                                // es necesario parsear el formulario
+	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
+
+	contador, _ := strconv.Atoi(r.Form.Get("cont"))  // numero del orden de la parte del fichero
+	hash := r.Form.Get("hash")                       // hash de la parte del fichero
+	size, _ := strconv.Atoi(r.Form.Get("size"))      // tamaño de la parte del fichero
+	user := r.Form.Get("user")                       // usuario que sube el fichero
+	filename := decodeURLB64(r.Form.Get("filename")) // nombre del fichero original
+
+	comprobar := comprobarHash(contador, hash, size, user, filename)
+	fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
+	response(w, comprobar, "Hash comprobado")
+}
+
+func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
+	//buscar el hash en la base de datos:
+	//si ya existe, hay que asociar ese hash existente con el usuario al que pertence y tal y se devuelve true
+	//si no existe, entonces simplemente se devuelve false
+
+	return false //esta puesto en false para que el cliente ahora siempre suba los ficheros (para pruebas y tal)
+}
+
+func handlerUpload(w http.ResponseWriter, r *http.Request) {
+	//fmt.Println("Paso por handlerUpload")
+
+	r.ParseMultipartForm(32 << 20)
+	file, handler, err := r.FormFile("uploadfile")
+	check(err)
+	defer file.Close()
+	fmt.Fprintf(w, "%v", handler.Header)
+	// Split on /.
+	fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
+	fmt.Println(fichero)
+	createDirIfNotExist("./archivos/")
+	createDirIfNotExist("./archivos/" + r.FormValue("Username"))
+	path := "./archivos/" + r.FormValue("Username") + "/" + fichero
+
+	err = os.Remove(path)
+	check(err)
+
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	check(err)
+	defer f.Close()
+	io.Copy(f, file)
+}
+
+func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
+	//fmt.Println("Paso por handlerUser")
+
+	u, err := url.Parse(r.URL.String())
+	check(err)
+	result := strings.Split(u.Path, "/")
+	createDirIfNotExist("./archivos/" + result[len(result)-1])
+	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
+	check(err)
+
+	s := make([]string, len(files))
+	for i, f := range files {
+		s[i] = encodeURLB64(f.Name())
+	}
+
+	slc, _ := json.Marshal(s)
+	w.Write(slc)
+}
+
+func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerFiles")
 
 	u, err := url.Parse(r.URL.String())
-	if err != nil {
-		log.Fatal(err)
-	}
+	check(err)
 	result := strings.Split(u.Path, "/")
 	fmt.Println(result)
 	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1])); err == nil {
 
 		// grab the generated receipt.pdf file and stream it to browser
 		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1]))
-
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		check(err)
 
 		kind, unknown := filetype.Match(streamBytes)
 		if unknown != nil {
@@ -343,8 +323,8 @@ func main() {
 	muxa.HandleFunc("/register", handlerRegister)
 	muxa.HandleFunc("/checkhash", handlerHash)
 	muxa.HandleFunc("/upload", handlerUpload)
-	muxa.HandleFunc("/user/{username}", handlerUser)
-	muxa.HandleFunc("/user/{username}/file/{filename}", handlerFiles)
+	muxa.HandleFunc("/user/{username}", handlerShowUserFiles)
+	muxa.HandleFunc("/user/{username}/file/{filename}", handlerSendFile)
 
 	srv := &http.Server{Addr: ":8081", Handler: muxa}
 
@@ -354,7 +334,6 @@ func main() {
 			log.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
 		}
 	}()
-	// Inicia el servidor HTTP y redirige todas las peticiones a HTTPS
 	go func() {
 		log.Println("Poniendo en marcha redireccionamiento HTTP->HTTPS, escuchando puerto 8080")
 		if err := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS)); err != nil {
