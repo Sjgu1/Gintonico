@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net/http"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -17,6 +19,17 @@ func check(e error) {
 	}
 }
 
+func sendServerPetition(data map[string][]string, route string) *http.Response {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	r, err := client.PostForm("https://localhost:8081"+route, data) // enviamos por POST
+	check(err)
+	return r
+}
+
 // Devuelve el string de la cadena encriptada
 func encriptarScrypt(cadena string, seed string) string {
 	salt := []byte(seed)
@@ -26,14 +39,25 @@ func encriptarScrypt(cadena string, seed string) string {
 	return base64.StdEncoding.EncodeToString(dk)
 }
 
-func encodeB64(cadena string) string {
+func encodeURLB64(cadena string) string {
 	//StdEncoding
 	return base64.URLEncoding.EncodeToString([]byte(cadena))
 }
 
-func decodeB64(cadena string) string {
+func decodeURLB64(cadena string) string {
 	//StdEncoding
 	decode, _ := base64.URLEncoding.DecodeString(cadena)
+	return string(decode[:])
+}
+
+func encodeB64(cadena string) string {
+	//StdEncoding
+	return base64.StdEncoding.EncodeToString([]byte(cadena))
+}
+
+func decodeB64(cadena string) string {
+	//StdEncoding
+	decode, _ := base64.StdEncoding.DecodeString(cadena)
 	return string(decode[:])
 }
 

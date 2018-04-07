@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/scrypt"
@@ -25,14 +26,25 @@ func encriptarScrypt(cadena string, seed string) string {
 	return base64.StdEncoding.EncodeToString(dk)
 }
 
-func encodeB64(cadena string) string {
+func encodeURLB64(cadena string) string {
 	//StdEncoding
 	return base64.URLEncoding.EncodeToString([]byte(cadena))
 }
 
-func decodeB64(cadena string) string {
+func decodeURLB64(cadena string) string {
 	//StdEncoding
 	decode, _ := base64.URLEncoding.DecodeString(cadena)
+	return string(decode[:])
+}
+
+func encodeB64(cadena string) string {
+	//StdEncoding
+	return base64.StdEncoding.EncodeToString([]byte(cadena))
+}
+
+func decodeB64(cadena string) string {
+	//StdEncoding
+	decode, _ := base64.StdEncoding.DecodeString(cadena)
 	return string(decode[:])
 }
 
@@ -45,4 +57,14 @@ func randomString(n int) string {
 		b[i] = randomStringLetters[rand.Intn(len(randomStringLetters))]
 	}
 	return string(b)
+}
+
+//Comprueba que los directorios no existen
+func createDirIfNotExist(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			panic(err)
+		}
+	}
 }

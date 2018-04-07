@@ -41,7 +41,7 @@ func vistaLogin() string {
 			</div>
 		</div>
 	</div>
-	<p id="texto"/>`
+	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
 }
 
 func vistaRegister() string {
@@ -88,7 +88,7 @@ func vistaRegister() string {
 			</div>
 		</div>
 	</div>
-	<p id="texto"/>`
+	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
 }
 
 func vistaPrincipal() string {
@@ -178,7 +178,7 @@ func vistaPrincipal() string {
 				</div>
 			</div>
 		</div>
-		<p id="texto"/>
+		<p id="texto"/><p id="texto1"/><p id="texto2"/>
 	</div>
 	
 	</nav>`

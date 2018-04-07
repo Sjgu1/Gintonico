@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,17 +25,6 @@ var login = ""
 type resp struct {
 	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
 	Msg string `json:"msg"` // mensaje adicional
-}
-
-func sendServerPetition(data map[string][]string, route string) *http.Response {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
-	r, err := client.PostForm("https://localhost:8081"+route, data) // enviamos por POST
-	check(err)
-	return r
 }
 
 func main() {
@@ -124,44 +116,111 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	//fmt.Println(body.Find("archivo").GetValue())
 
-	targetURL := "https://localhost:8081/upload"
 	ruta := body.Find("route").GetValue()
 	filename := body.Find("filename").GetValue()
-	enviarFichero(ruta, encodeB64(filename), targetURL)
+	enviarFichero(ruta, encodeURLB64(filename))
 	//cambiarVista("principal")
 	//actualizarVista(nil, nil)
 }
 
-func enviarFichero(ruta string, filename string, targetURL string) {
+func enviarFichero(ruta string, filename string) {
+	checkHashURL := "/checkhash"
 	f, err := os.Open(ruta)
 	check(err)
 	defer f.Close()
-	bytes := make([]byte, 1024*1024*4) //byte -> kb -> mb
+	bytesTam := 1024 * 1024 * 4 //byte -> kb -> mb * 4
+	bytes := make([]byte, bytesTam)
 	bytesLeidos, err := f.Read(bytes)
 	check(err)
+
+	if bytesLeidos > 0 && bytesLeidos < bytesTam { //solo hay una parte
+		bytes = bytes[:bytesLeidos]
+	}
+
 	contador := 0
 	contadorBytes := bytesLeidos
 	texto := strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
 	body.Find("texto").SetText(texto)
-	enviarParteFichero(contador, bytes, bytesLeidos)
+	enviarParteFichero(contador, bytes, bytesLeidos, checkHashURL, filename)
+
 	for bytesLeidos > 0 {
 		bytesLeidos, err = f.ReadAt(bytes, int64(contadorBytes))
 		check(err)
 		contador++
 		contadorBytes += bytesLeidos
-		//body.Find("texto").SetText(strconv.Itoa(bytesLeidos))
 		if bytesLeidos > 0 {
+			if bytesLeidos < bytesTam { //ultima parte
+				bytes = bytes[:bytesLeidos]
+			}
 			texto += strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
-			enviarParteFichero(contador, bytes, bytesLeidos)
+			enviarParteFichero(contador, bytes, bytesLeidos, checkHashURL, filename)
 		}
 	}
 
-	body.Find("texto").SetText(string(bytes))
+	body.Find("texto").SetText(texto)
 }
 
-func enviarParteFichero(contador int, data []byte, size int) {
+func enviarParteFichero(cont int, parte []byte, tam int, checkHashURL string, filename string) {
 	//preparar peticion
 	//hash := hashSHA256(data)
+	data := url.Values{} // estructura para contener los valores
+	contador := strconv.Itoa(cont)
+	hash := hashSHA256(parte)
+	size := strconv.Itoa(tam)
+	data.Set("cont", contador)
+	data.Set("hash", hex.EncodeToString(hash[:]))
+	data.Set("size", size)
+	data.Set("user", login)
+	data.Set("filename", filename)
+
+	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash[:]) + " size: " + size + " user: " + login + " filename: " + filename
+	body.Find("texto1").SetText(imprimir)
+
+	response := sendServerPetition(data, checkHashURL)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+
+	var respuesta resp
+	err := json.Unmarshal(buf.Bytes(), &respuesta)
+	check(err)
+
+	if respuesta.Ok == false { //el hash no existe en el servidor (la parte no se ha subido nunca)
+		sendFile(parte, filename, contador)
+	}
+}
+
+func sendFile(data []byte, filename string, parte string) {
+	targetURL := "https://localhost:8081/upload"
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+	err := bodyWriter.WriteField("Username", login)
+	check(err)
+	err = bodyWriter.WriteField("Parte", parte)
+	check(err)
+
+	// this step is very important
+	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
+	check(err)
+
+	//iocopy
+	//fh, err := os.Open(ruta) ya no, ahora son bytes[]
+	r := bytes.NewReader(data)
+	_, err = io.Copy(fileWriter, r)
+	check(err)
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	resp, err := client.Post(targetURL, contentType, bodyBuf)
+	check(err)
+
+	defer resp.Body.Close()
+	/*respBody, err := ioutil.ReadAll(resp.Body)
+	check(err)*/
 }
 
 func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
@@ -170,7 +229,7 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	}
 	client := &http.Client{Transport: tr}
 
-	filename := encodeB64(body.Find("archivoPedido").GetValue())
+	filename := encodeURLB64(body.Find("archivoPedido").GetValue())
 
 	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+filename, "application/json", nil) // Pedimos Por get
 	check(err)
@@ -200,13 +259,13 @@ func peticionNombreFicheros() string {
 			if i%2 != 0 {
 				respuesta += `<div class="file-box">  
 			<div class="file">
-				<a href="#" onclick="seleccionarArchivo('` + decodeB64(n) + `')">
+				<a href="#" onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
 					<span class="corner"></span>
 					<div class="icon">
 						<i class="fa fa-file"></i>
 					</div>
 					<div class="file-name">
-					` + decodeB64(n) + `
+					` + decodeURLB64(n) + `
 						<br>
 					</div>
 				</a>

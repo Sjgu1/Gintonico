@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,7 +68,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 
 	s := make([]string, len(files))
 	for i, f := range files {
-		s[i] = encodeB64(f.Name())
+		s[i] = encodeURLB64(f.Name())
 	}
 
 	slc, _ := json.Marshal(s)
@@ -170,16 +171,6 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//Comprueba que los directorios no existen
-func createDirIfNotExist(dir string) {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0755)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerUpload")
 
@@ -192,7 +183,7 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	fmt.Fprintf(w, "%v", handler.Header)
 	// Split on /.
-	fichero := decodeB64(handler.Filename)
+	fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
 	fmt.Println(fichero)
 	createDirIfNotExist("./archivos/")
 	createDirIfNotExist("./archivos/" + r.FormValue("Username"))
@@ -203,7 +194,28 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 	io.Copy(f, file)
+}
 
+func handlerHash(w http.ResponseWriter, r *http.Request) {
+	//fmt.Println("entro handlerHash")
+	r.ParseForm()                                // es necesario parsear el formulario
+	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
+
+	contador, _ := strconv.Atoi(r.Form.Get("cont"))  // numero del orden de la parte del fichero
+	hash := r.Form.Get("hash")                       // hash de la parte del fichero
+	size, _ := strconv.Atoi(r.Form.Get("size"))      // tamaño de la parte del fichero
+	user := r.Form.Get("user")                       // usuario que sube el fichero
+	filename := decodeURLB64(r.Form.Get("filename")) // nombre del fichero original
+
+	comprobar := comprobarHash(contador, hash, size, user, filename)
+	fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
+	response(w, comprobar, "Hash comprobado")
+}
+
+func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
+	//buscar en la base de datos, si ya existe devolver true, si no existe false
+	//además si ya existe, hay que asociar ese hash existente con el usuario y to eso
+	return false
 }
 
 func validarRegister(register string, password string, confirm string) bool {
@@ -278,10 +290,10 @@ func handlerFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	result := strings.Split(u.Path, "/")
 	fmt.Println(result)
-	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + decodeB64(result[len(result)-1])); err == nil {
+	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1])); err == nil {
 
 		// grab the generated receipt.pdf file and stream it to browser
-		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + decodeB64(result[len(result)-1]))
+		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1]))
 
 		if err != nil {
 			fmt.Println(err)
@@ -327,10 +339,11 @@ func main() {
 
 	muxa := mux.NewRouter()
 	muxa.HandleFunc("/", handler)
-	muxa.Handle("/login", http.HandlerFunc(handlerLogin))
-	muxa.Handle("/register", http.HandlerFunc(handlerRegister))
-	muxa.Handle("/upload", http.HandlerFunc(handlerUpload))
-	muxa.Handle("/user/{username}", http.HandlerFunc(handlerUser))
+	muxa.HandleFunc("/login", handlerLogin)
+	muxa.HandleFunc("/register", handlerRegister)
+	muxa.HandleFunc("/checkhash", handlerHash)
+	muxa.HandleFunc("/upload", handlerUpload)
+	muxa.HandleFunc("/user/{username}", handlerUser)
 	muxa.HandleFunc("/user/{username}/file/{filename}", handlerFiles)
 
 	srv := &http.Server{Addr: ":8081", Handler: muxa}
