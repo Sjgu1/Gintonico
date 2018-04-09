@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ type User struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
 	Salt     string `json:"salt"`
+	Cifrado  string `json:"cifrado"`
 }
 
 // función para escribir una respuesta del servidor
@@ -161,8 +163,9 @@ func validarRegister(register string, password string, confirm string) bool {
 	json.Unmarshal(byteValue, &users)
 
 	salt := randomString(30)
+	cifrado := randomString(30)
 
-	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, salt), Salt: salt})
+	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado})
 
 	usersJSON, _ := json.Marshal(users)
 	err = ioutil.WriteFile("users.json", usersJSON, 0644)
@@ -239,8 +242,7 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	createDirIfNotExist("./archivos/" + r.FormValue("Username"))
 	path := "./archivos/" + r.FormValue("Username") + "/" + fichero
 
-	err = os.Remove(path)
-	check(err)
+	deleteFile(path)
 
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	check(err)
@@ -303,6 +305,52 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func cifrarFicherosUsuarios() {
+	//recorrer todos los ficheros y cifrarlos con una contraseña maestra
+	err := filepath.Walk("./archivos", encriptar) //esta funcion recorre todos los directorios y ficheros recursivamente
+	check(err)
+}
+
+func encriptar(path string, f os.FileInfo, err error) error { //funcion para cifrarFicherosUsuarios
+	if f.IsDir() == false { //para coger solo los ficheros y no las carpetas
+		file, err := ioutil.ReadFile(path)
+		check(err)
+		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
+		encryptedFile := encryptAESCFB(file, clavemaestra)
+
+		deleteFile(path)
+
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+		check(err)
+		defer f.Close()
+		io.Copy(f, bytes.NewReader(encryptedFile))
+	}
+	return nil
+}
+
+func descifrarFicherosUsuarios() {
+	//recorrer todos los ficheros y cifrarlos con una contraseña maestra
+	err := filepath.Walk("./archivos", desencriptar) //esta funcion recorre todos los directorios y ficheros recursivamente
+	check(err)
+}
+
+func desencriptar(path string, f os.FileInfo, err error) error { //funcion para descifrarFicherosUsuarios
+	if f.IsDir() == false { //para coger solo los ficheros y no las carpetas
+		file, err := ioutil.ReadFile(path)
+		check(err)
+		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
+		encryptedFile := decryptAESCFB(file, clavemaestra)
+
+		deleteFile(path)
+
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+		check(err)
+		defer f.Close()
+		io.Copy(f, bytes.NewReader(encryptedFile))
+	}
+	return nil
+}
+
 func main() {
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
@@ -341,12 +389,19 @@ func main() {
 		}
 	}()
 
+	go func() {
+		log.Println("Descifrando ficheros...")
+		descifrarFicherosUsuarios()
+	}()
+
 	<-stopChan // espera señal SIGINT
 	log.Println("Apagando servidor ...")
 	// apagar servidor de forma segura
 	ctx, fnc := context.WithTimeout(context.Background(), 5*time.Second)
 	fnc()
 	srv.Shutdown(ctx)
+
+	cifrarFicherosUsuarios()
 
 	log.Println("Servidor detenido correctamente")
 }
