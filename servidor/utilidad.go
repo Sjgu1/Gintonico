@@ -55,7 +55,6 @@ func decodeB64(cadena string) string {
 const randomStringLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func randomString(n int) string {
-	//rand.Seed(time.Now().UTC().UnixNano())
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = randomStringLetters[mathrand.Intn(len(randomStringLetters))]

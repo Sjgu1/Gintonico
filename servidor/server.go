@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -162,8 +163,8 @@ func validarRegister(register string, password string, confirm string) bool {
 	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(byteValue, &users)
 
-	salt := randomString(30)
-	cifrado := randomString(30)
+	salt := randomString(32)
+	cifrado := randomString(32)
 
 	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado})
 
@@ -307,39 +308,54 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 
 func cifrarFicherosUsuarios() {
 	//recorrer todos los ficheros y cifrarlos con una contraseña maestra
-	err := filepath.Walk("./archivos", encriptar) //esta funcion recorre todos los directorios y ficheros recursivamente
+	err := filepath.Walk("./archivos", visitEncrypt) //esta funcion recorre todos los directorios y ficheros recursivamente
 	check(err)
 }
 
-func encriptar(path string, f os.FileInfo, err error) error { //funcion para cifrarFicherosUsuarios
+func visitEncrypt(path string, f os.FileInfo, err error) error { //funcion para cifrarFicherosUsuarios
 	if f.IsDir() == false { //para coger solo los ficheros y no las carpetas
-		file, err := ioutil.ReadFile(path)
-		check(err)
 		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
-		encryptedFile := encryptAESCFB(file, clavemaestra)
+		cifrarFichero(path, clavemaestra)
+	}
+	return nil
+}
+
+func cifrarFichero(path string, clave string) {
+	file, err := ioutil.ReadFile(path)
+	check(err)
+
+	if len(file) > 0 {
+		encryptedFile := encryptAESCFB(file, clave)
 
 		deleteFile(path)
 
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+		filenew, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 		check(err)
-		defer f.Close()
-		io.Copy(f, bytes.NewReader(encryptedFile))
+		defer filenew.Close()
+		io.Copy(filenew, bytes.NewReader(encryptedFile))
 	}
-	return nil
 }
 
 func descifrarFicherosUsuarios() {
 	//recorrer todos los ficheros y cifrarlos con una contraseña maestra
-	err := filepath.Walk("./archivos", desencriptar) //esta funcion recorre todos los directorios y ficheros recursivamente
+	err := filepath.Walk("./archivos", visitDecrypt) //esta funcion recorre todos los directorios y ficheros recursivamente
 	check(err)
 }
 
-func desencriptar(path string, f os.FileInfo, err error) error { //funcion para descifrarFicherosUsuarios
+func visitDecrypt(path string, f os.FileInfo, err error) error { //funcion para descifrarFicherosUsuarios
 	if f.IsDir() == false { //para coger solo los ficheros y no las carpetas
-		file, err := ioutil.ReadFile(path)
-		check(err)
 		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
-		encryptedFile := decryptAESCFB(file, clavemaestra)
+		descifrarFichero(path, clavemaestra)
+	}
+	return nil
+}
+
+func descifrarFichero(path string, clave string) {
+	file, err := ioutil.ReadFile(path)
+	check(err)
+
+	if len(file) > 0 {
+		encryptedFile := decryptAESCFB(file, clave)
 
 		deleteFile(path)
 
@@ -348,10 +364,10 @@ func desencriptar(path string, f os.FileInfo, err error) error { //funcion para 
 		defer f.Close()
 		io.Copy(f, bytes.NewReader(encryptedFile))
 	}
-	return nil
 }
 
 func main() {
+	rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 
@@ -389,10 +405,9 @@ func main() {
 		}
 	}()
 
-	go func() {
-		log.Println("Descifrando ficheros...")
-		descifrarFicherosUsuarios()
-	}()
+	log.Println("Descifrando ficheros...")
+	descifrarFicherosUsuarios()
+	descifrarFichero("users.json", "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_")
 
 	<-stopChan // espera señal SIGINT
 	log.Println("Apagando servidor ...")
@@ -401,7 +416,9 @@ func main() {
 	fnc()
 	srv.Shutdown(ctx)
 
+	log.Println("Cifrando ficheros...")
 	cifrarFicherosUsuarios()
+	cifrarFichero("./users.json", "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_")
 
 	log.Println("Servidor detenido correctamente")
 }
