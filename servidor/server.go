@@ -43,6 +43,17 @@ type User struct {
 	Cifrado  string `json:"cifrado"`
 }
 
+//Estructura de bloque
+type Block struct {
+	Block string `json:"block"`
+	Hash  string `json:"hash"`
+}
+
+//Estructura de bloque
+type Blocks struct {
+	Blocks []Block `json:"block"`
+}
+
 // función para escribir una respuesta del servidor
 func response(w io.Writer, ok bool, msg string) {
 	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
@@ -240,10 +251,11 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
 	fmt.Println(fichero)
 	createDirIfNotExist("./archivos/")
-	createDirIfNotExist("./archivos/" + r.FormValue("Username"))
-	path := "./archivos/" + r.FormValue("Username") + "/" + fichero
+	//createDirIfNotExist("./archivos/" + r.FormValue("Username"))
 
-	deleteFile(path)
+	//path := "./archivos/" + r.FormValue("Username") + "/" + fichero
+	last := getNombreUlitmoFichero() + 1
+	path := strconv.Itoa(last)
 
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
 	check(err)
@@ -306,6 +318,31 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func getNombreUlitmoFichero() int {
+	// Abre el archivo json
+	jsonFile, err := os.Open("blocks.json")
+	// if we os.Open returns an error then handle it
+	check(err)
+	//defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Blocks array
+	var blocks Blocks
+
+	json.Unmarshal(byteValue, &blocks)
+	if len(blocks.Blocks) == 0 {
+		return -1
+	} else {
+		result, err := strconv.Atoi(blocks.Blocks[len(blocks.Blocks)-1].Block)
+		check(err)
+		return result
+	}
+
+}
+
 func cifrarFicherosUsuarios() {
 	//recorrer todos los ficheros y cifrarlos con una contraseña maestra
 	err := filepath.Walk("./archivos", visitEncrypt) //esta funcion recorre todos los directorios y ficheros recursivamente
@@ -313,7 +350,7 @@ func cifrarFicherosUsuarios() {
 }
 
 func visitEncrypt(path string, f os.FileInfo, err error) error { //funcion para cifrarFicherosUsuarios
-	if f.IsDir() == false { //para coger solo los ficheros y no las carpetas
+	if f != nil && f.IsDir() == false { //para coger solo los ficheros y no las carpetas
 		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
 		cifrarFichero(path, clavemaestra)
 	}
@@ -342,8 +379,9 @@ func descifrarFicherosUsuarios() {
 	check(err)
 }
 
-func visitDecrypt(path string, f os.FileInfo, err error) error { //funcion para descifrarFicherosUsuarios
-	if f.IsDir() == false { //para coger solo los ficheros y no las carpetas
+func visitDecrypt(path string, f os.FileInfo, err error) error {
+	//funcion para descifrarFicherosUsuarios
+	if f != nil && f.IsDir() == false { //para coger solo los ficheros y no las carpetas
 		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
 		descifrarFichero(path, clavemaestra)
 	}
