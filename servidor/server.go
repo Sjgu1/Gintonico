@@ -30,12 +30,12 @@ type resp struct {
 	Msg string `json:"msg"` // mensaje adicional
 }
 
-// Estructura de usuarios
+// Users Estructura de usuarios
 type Users struct {
 	Users []User `json:"users"`
 }
 
-//Estructura de usuario
+// User Estructura de usuario
 type User struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
@@ -43,13 +43,13 @@ type User struct {
 	Cifrado  string `json:"cifrado"`
 }
 
-//Estructura de bloque
+// Block Estructura de bloque
 type Block struct {
 	Block string `json:"block"`
 	Hash  string `json:"hash"`
 }
 
-//Estructura de bloque
+// Blocks Estructura de bloque
 type Blocks struct {
 	Blocks []Block `json:"block"`
 }
@@ -335,12 +335,10 @@ func getNombreUlitmoFichero() int {
 	json.Unmarshal(byteValue, &blocks)
 	if len(blocks.Blocks) == 0 {
 		return -1
-	} else {
-		result, err := strconv.Atoi(blocks.Blocks[len(blocks.Blocks)-1].Block)
-		check(err)
-		return result
 	}
-
+	result, err := strconv.Atoi(blocks.Blocks[len(blocks.Blocks)-1].Block)
+	check(err)
+	return result
 }
 
 func cifrarFicherosUsuarios() {

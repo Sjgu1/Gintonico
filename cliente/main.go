@@ -184,17 +184,19 @@ func enviarParteFichero(cont int, parte []byte, tam int, checkHashURL string, fi
 	check(err)
 
 	if respuesta.Ok == false { //el hash no existe en el servidor (la parte no se ha subido nunca)
-		sendFile(parte, filename, contador)
+		sendFile(parte, filename, contador, hex.EncodeToString(hash[:]))
 	}
 }
 
-func sendFile(data []byte, filename string, parte string) {
+func sendFile(data []byte, filename string, parte string, hash string) {
 	targetURL := "https://localhost:8081/upload"
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
 	err := bodyWriter.WriteField("Username", login)
 	check(err)
 	err = bodyWriter.WriteField("Parte", parte)
+	check(err)
+	err = bodyWriter.WriteField("Hash", hash)
 	check(err)
 
 	// this step is very important
