@@ -47,11 +47,30 @@ type User struct {
 type Block struct {
 	Block string `json:"block"`
 	Hash  string `json:"hash"`
+	User  string `json:"user"`
 }
 
 // Blocks Estructura de bloque
 type Blocks struct {
-	Blocks []Block `json:"block"`
+	Blocks []Block `json:"blocks"`
+}
+
+//BlockPosition Posicion del bloque
+type BlockPosition struct {
+	Block    string `json:"block"`
+	Position string `json:"position"`
+}
+
+// File Estructura de file
+type File struct {
+	User  string          `json:"user"`
+	File  string          `json:"file"`
+	Order []BlockPosition `json:"order"`
+}
+
+//Files estructura de files
+type Files struct {
+	Files []File `json:"files"`
 }
 
 // función para escribir una respuesta del servidor
@@ -227,7 +246,7 @@ func handlerHash(w http.ResponseWriter, r *http.Request) {
 	filename := decodeURLB64(r.Form.Get("filename")) // nombre del fichero original
 
 	comprobar := comprobarHash(contador, hash, size, user, filename)
-	fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
+	//fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
 	response(w, comprobar, "Hash comprobado")
 }
 
@@ -236,7 +255,20 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 	//si ya existe, hay que asociar ese hash existente con el usuario al que pertence y tal y se devuelve true
 	//si no existe, entonces simplemente se devuelve false
 
-	return false //esta puesto en false para que el cliente ahora siempre suba los ficheros (para pruebas y tal)
+	parte := strconv.Itoa(cont)
+
+	var position BlockPosition
+	existeBloque, nombreBloque := existeBloqueHash(hash)
+
+	if existeBloque {
+		position.Block = nombreBloque
+		position.Position = parte
+		registrarBloqueFicheroUsuario(user, filename, position)
+		return true
+	}
+
+	return false
+
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
@@ -248,21 +280,216 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 	fmt.Fprintf(w, "%v", handler.Header)
 	// Split on /.
-	fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
-	fmt.Println(fichero)
+	//fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
 	createDirIfNotExist("./archivos/")
 	//createDirIfNotExist("./archivos/" + r.FormValue("Username"))
 
-	//path := "./archivos/" + r.FormValue("Username") + "/" + fichero
-	last := getNombreUlitmoFichero() + 1
-	path := strconv.Itoa(last)
+	//Se crea un bloque con los datos recibidos
+	var position BlockPosition
 
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+	last := getNombreUltimoFichero()
+	value, err := strconv.Atoi(last)
+	value++
+	path := strconv.Itoa(value)
+
+	f, err := os.OpenFile("./archivos/"+path, os.O_WRONLY|os.O_CREATE, 0666)
 	check(err)
 	defer f.Close()
 	io.Copy(f, file)
+	position.Block = path
+	position.Position = r.FormValue("Parte")
+
+	//Se registra el bloque en la base de datos
+	var block Block
+	block.User = r.FormValue("Username")
+	block.Hash = r.FormValue("Hash")
+	block.Block = path
+	registrarBloque(block)
+
+	//Se le asigna el bloque al par fichero-usuario
+	registrarBloqueFicheroUsuario(r.FormValue("Username"), decodeURLB64(handler.Filename), position)
+
 }
 
+func registrarBloque(bloque Block) {
+
+	// Abre el archivo json
+	jsonFile, err := os.Open("blocks.json")
+	check(err)
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Users array
+	var blocks Blocks
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &blocks)
+
+	blocks.Blocks = append(blocks.Blocks, Block{Block: bloque.Block, Hash: bloque.Hash, User: bloque.User})
+
+	blocksJSON, _ := json.Marshal(blocks)
+	err = ioutil.WriteFile("blocks.json", blocksJSON, 0644)
+	check(err)
+
+}
+func existeBloqueHash(hash string) (bool, string) {
+	// Abre el archivo json
+	jsonFile, err := os.Open("blocks.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat("blocks.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("blocks.json")
+			check(err)
+			defer file.Close()
+		}
+
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Files array
+	var blocks Blocks
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &blocks)
+	// Comprueba si algun usuario coincide con el del login
+
+	for i := 0; i < len(blocks.Blocks); i++ {
+		if hash == blocks.Blocks[i].Hash {
+			return true, blocks.Blocks[i].Block
+		}
+	}
+	return false, "nil"
+}
+
+func existeFicheroUsuario(usuario string, fichero string) bool {
+	// Abre el archivo json
+	jsonFile, err := os.Open("files.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat("files.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("files.json")
+			check(err)
+			defer file.Close()
+		}
+
+		fmt.Println("==> done creating file", "files.json")
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Files array
+	var files Files
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &files)
+	// Comprueba si algun usuario coincide con el del login
+
+	for i := 0; i < len(files.Files); i++ {
+		if usuario == files.Files[i].User && fichero == files.Files[i].File {
+			return true
+		}
+	}
+	return false
+
+}
+
+func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockPosition) {
+	// Abre el archivo json
+	jsonFile, err := os.Open("files.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat("files.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("files.json")
+			check(err)
+			defer file.Close()
+		}
+
+		fmt.Println("==> done creating file", "files.json")
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Files array
+	var files Files
+
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
+	json.Unmarshal(byteValue, &files)
+
+	existe := false
+
+	var order []BlockPosition
+	var count int
+	for i := 0; i < len(files.Files); i++ {
+		if usuario == files.Files[i].User && fichero == files.Files[i].File {
+			existe = true
+			order = files.Files[i].Order
+			count = i
+		}
+	}
+
+	if !existe { // Primer bloque de un nuevo archivo
+
+		order = append(order, bloque)
+		files.Files = append(files.Files, File{User: usuario, File: fichero, Order: order})
+
+		filesJSON, _ := json.Marshal(files)
+		err = ioutil.WriteFile("files.json", filesJSON, 0644)
+		// now Marshal it
+		check(err)
+
+	} else {
+		// Si ya existe un usuario-file, comprueba que el bloque-posicion existe, si no existe, lo crea, sino lo sobrescribe
+		asignado := false
+		for i := 0; i < len(order); i++ {
+			if bloque.Position == order[i].Position {
+				order[i] = bloque
+				asignado = true
+			}
+		}
+		if !asignado {
+			order = append(order, bloque)
+		}
+		files.Files[count].Order = order
+		filesJSON, _ := json.Marshal(files)
+		err = ioutil.WriteFile("files.json", filesJSON, 0644)
+		// now Marshal it
+		check(err)
+
+	}
+
+}
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerUser")
 
@@ -318,27 +545,40 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func getNombreUlitmoFichero() int {
+func getNombreUltimoFichero() string {
 	// Abre el archivo json
 	jsonFile, err := os.Open("blocks.json")
 	// if we os.Open returns an error then handle it
-	check(err)
-	//defer the closing of our jsonFile so that we can parse it later on
+	if err != nil {
+		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat("blocks.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("blocks.json")
+			check(err)
+			defer file.Close()
+		}
+
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
 
 	// read our opened xmlFile as a byte array.
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
-	// we initialize our Blocks array
+	// we initialize our Files array
 	var blocks Blocks
 
+	// we unmarshal our byteArray which contains our
+	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(byteValue, &blocks)
-	if len(blocks.Blocks) == 0 {
-		return -1
+	final := "-1"
+	for i := 0; i < len(blocks.Blocks); i++ {
+		final = blocks.Blocks[i].Block
 	}
-	result, err := strconv.Atoi(blocks.Blocks[len(blocks.Blocks)-1].Block)
-	check(err)
-	return result
+	return final
 }
 
 func cifrarFicherosUsuarios() {
