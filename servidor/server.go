@@ -472,14 +472,23 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 	} else {
 		// Si ya existe un usuario-file, comprueba que el bloque-posicion existe, si no existe, lo crea, sino lo sobrescribe
 		asignado := false
+		var newOrder []BlockPosition
 		for i := 0; i < len(order); i++ {
 			if bloque.Position == order[i].Position {
 				order[i] = bloque
 				asignado = true
 			}
+			newOrder = append(newOrder, order[i])
+			if asignado {
+				i = len(order)
+			}
+
 		}
 		if !asignado {
 			order = append(order, bloque)
+		}
+		if asignado {
+			order = newOrder
 		}
 		files.Files[count].Order = order
 		filesJSON, _ := json.Marshal(files)
