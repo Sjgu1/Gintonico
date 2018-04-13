@@ -598,7 +598,8 @@ func cifrarFicherosUsuarios() {
 
 func visitEncrypt(path string, f os.FileInfo, err error) error { //funcion para cifrarFicherosUsuarios
 	if f != nil && f.IsDir() == false { //para coger solo los ficheros y no las carpetas
-		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
+		//clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
+		clavemaestra := obtenerClaveCifrado(path)
 		cifrarFichero(path, clavemaestra)
 	}
 	return nil
@@ -626,10 +627,54 @@ func descifrarFicherosUsuarios() {
 	check(err)
 }
 
+func obtenerClaveCifrado(path string) string {
+	nombreBloque := strings.Split(path, "/")
+	bloque := nombreBloque[1]
+	/* Obtener quien cifro el bloque*/
+	jsonFile, err := os.Open("blocks.json")
+	check(err)
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	var blocks Blocks
+
+	json.Unmarshal(byteValue, &blocks)
+	var userPropietarioClave string
+
+	for i := 0; i < len(blocks.Blocks); i++ {
+		if bloque == blocks.Blocks[i].Block {
+			userPropietarioClave = blocks.Blocks[i].User
+		}
+	}
+
+	/* FIN Obtener quien cifro el bloque*/
+	/* Obtener clave de cifrado el bloque*/
+
+	jsonFile2, err := os.Open("users.json")
+	defer jsonFile2.Close()
+	byteValue2, _ := ioutil.ReadAll(jsonFile2)
+
+	var users Users
+
+	json.Unmarshal(byteValue2, &users)
+	var claveCifrado string
+
+	for i := 0; i < len(users.Users); i++ {
+		if userPropietarioClave == users.Users[i].User {
+			claveCifrado = users.Users[i].Cifrado
+		}
+	}
+
+	/* FIN Obtener clave de cifrado el bloque*/
+	return claveCifrado
+}
+
 func visitDecrypt(path string, f os.FileInfo, err error) error {
 	//funcion para descifrarFicherosUsuarios
 	if f != nil && f.IsDir() == false { //para coger solo los ficheros y no las carpetas
-		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
+		//clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
+		clavemaestra := obtenerClaveCifrado(path)
 		descifrarFichero(path, clavemaestra)
 	}
 	return nil
@@ -691,8 +736,8 @@ func main() {
 	}()
 
 	log.Println("Descifrando ficheros...")
-	descifrarFicherosUsuarios()
 	descifrarFichero("users.json", "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_")
+	descifrarFicherosUsuarios()
 
 	<-stopChan // espera señal SIGINT
 	log.Println("Apagando servidor ...")
