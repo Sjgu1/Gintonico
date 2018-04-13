@@ -443,8 +443,6 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 	// we initialize our Files array
 	var files Files
 
-	// we unmarshal our byteArray which contains our
-	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(byteValue, &files)
 
 	existe := false
@@ -500,22 +498,63 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 
 }
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("Paso por handlerUser")
+	// Abre el archivo json
+	jsonFile, err := os.Open("files.json")
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat("files.json")
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create("files.json")
+			check(err)
+			defer file.Close()
+		}
+
+		fmt.Println("==> done creating file", "files.json")
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	// we initialize our Files array
+	var files Files
+
+	json.Unmarshal(byteValue, &files)
 
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
-	createDirIfNotExist("./archivos/" + result[len(result)-1])
-	files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
-	check(err)
-
-	s := make([]string, len(files))
-	for i, f := range files {
-		s[i] = encodeURLB64(f.Name())
+	username := result[len(result)-1]
+	var filesUser []string
+	for i := 0; i < len(files.Files); i++ {
+		if username == files.Files[i].User {
+			filesUser = append(filesUser, encodeURLB64(files.Files[i].File))
+		}
 	}
-
-	slc, _ := json.Marshal(s)
+	slc, _ := json.Marshal(filesUser)
 	w.Write(slc)
+
+	/*
+			u, err := url.Parse(r.URL.String())
+		check(err)
+		result := strings.Split(u.Path, "/")
+		createDirIfNotExist("./archivos")
+		files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
+		check(err)
+
+		s := make([]string, len(files))
+		for i, f := range files {
+			s[i] = encodeURLB64(f.Name())
+		}
+
+		slc, _ := json.Marshal(s)
+		w.Write(slc)
+	*/
 }
 
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {
