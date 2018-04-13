@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -119,8 +118,8 @@ func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	ruta := body.Find("route").GetValue()
 	filename := body.Find("filename").GetValue()
 	enviarFichero(ruta, encodeURLB64(filename))
-	//cambiarVista("principal")
-	//actualizarVista(nil, nil)
+	cambiarVista("principal")
+	actualizarVista(nil, nil)
 }
 
 func enviarFichero(ruta string, filename string) {
@@ -236,10 +235,16 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	check(err)
 
 	defer response.Body.Close()
-	contents, err := ioutil.ReadAll(response.Body)
-	check(err)
+	//	contents, err := ioutil.ReadAll(response.Body)
+	//	check(err)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	newStr := buf.String()
 	//fmt.Printf("%s\n", string(contents))
-	body.Find("texto").SetText(string(contents))
+	createFile(body.Find("archivoPedido").GetValue())
+	writeFile("./"+body.Find("archivoPedido").GetValue(), newStr)
+
+	body.Find("texto").SetText(body.Find("archivoPedido").GetValue())
 }
 
 func peticionNombreFicheros() string {

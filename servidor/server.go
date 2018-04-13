@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/h2non/filetype"
 
 	"github.com/kabukky/httpscerts"
 )
@@ -538,23 +538,6 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 	}
 	slc, _ := json.Marshal(filesUser)
 	w.Write(slc)
-
-	/*
-			u, err := url.Parse(r.URL.String())
-		check(err)
-		result := strings.Split(u.Path, "/")
-		createDirIfNotExist("./archivos")
-		files, err := ioutil.ReadDir("./archivos/" + result[len(result)-1] + "/")
-		check(err)
-
-		s := make([]string, len(files))
-		for i, f := range files {
-			s[i] = encodeURLB64(f.Name())
-		}
-
-		slc, _ := json.Marshal(s)
-		w.Write(slc)
-	*/
 }
 
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {
@@ -564,33 +547,77 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 	check(err)
 	result := strings.Split(u.Path, "/")
 	fmt.Println(result)
-	if _, err := os.Stat("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1])); err == nil {
+	userSolicitante := result[len(result)-3]
+	archivoSolicitado := decodeURLB64(result[len(result)-1])
+	// Abre el archivo json
+	jsonFile, err := os.Open("files.json")
+	check(err)
+	defer jsonFile.Close()
 
-		// grab the generated receipt.pdf file and stream it to browser
-		streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1]))
-		check(err)
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var files Files
 
-		kind, unknown := filetype.Match(streamBytes)
-		if unknown != nil {
-			fmt.Printf("Unknown: %s", unknown)
-			return
+	json.Unmarshal(byteValue, &files)
+	existe := false
+	var bloquesDeArchivo []BlockPosition
+	for i := 0; i < len(files.Files); i++ {
+		if files.Files[i].User == userSolicitante && files.Files[i].File == archivoSolicitado && !existe {
+			existe = true
+			bloquesDeArchivo = files.Files[i].Order
 		}
+	}
 
-		fmt.Printf("File type: %s. MIME: %s\n", kind.Extension, kind.MIME.Value)
-		b := bytes.NewBuffer(streamBytes)
-
-		// stream straight to client(browser)
-
-		w.Header().Set("Content-type", kind.MIME.Value)
-
-		if _, err := b.WriteTo(w); err != nil { // <----- here!
-			fmt.Fprintf(w, "%s", err)
-		}
-
-	} else {
+	if !existe {
 		response(w, true, "El archivo No Existe")
 	}
 
+	formatoArchivo := strings.Split(archivoSolicitado, ".")
+	var streamBytesTotal []byte
+	for i := 0; i < len(bloquesDeArchivo); i++ {
+		streamBytes, err := ioutil.ReadFile("./archivos/" + bloquesDeArchivo[i].Block)
+		check(err)
+		streamBytesTotal = append(streamBytesTotal[:], streamBytes[:]...)
+
+	}
+	kind := mime.TypeByExtension("." + formatoArchivo[len(formatoArchivo)-1])
+
+	b := bytes.NewBuffer(streamBytesTotal)
+	// stream straight to client(browser)
+
+	w.Header().Set("Content-type", kind)
+
+	if _, err := b.WriteTo(w); err != nil { // <----- here!
+		fmt.Fprintf(w, "%s", err)
+	}
+
+	/*
+		if _, err := os.Stat("./archivos/" + "/" + ); err == nil {
+
+			// grab the generated receipt.pdf file and stream it to browser
+			streamBytes, err := ioutil.ReadFile("./archivos/" + result[len(result)-3] + "/" + decodeURLB64(result[len(result)-1]))
+			check(err)
+
+			kind, unknown := filetype.Match(streamBytes)
+			if unknown != nil {
+				fmt.Printf("Unknown: %s", unknown)
+				return
+			}
+
+			fmt.Printf("File type: %s. MIME: %s\n", kind.Extension, kind.MIME.Value)
+			b := bytes.NewBuffer(streamBytes)
+
+			// stream straight to client(browser)
+
+			w.Header().Set("Content-type", kind.MIME.Value)
+
+			if _, err := b.WriteTo(w); err != nil { // <----- here!
+				fmt.Fprintf(w, "%s", err)
+			}
+
+		} else {
+			response(w, true, "El archivo No Existe")
+		}
+	*/
 }
 
 func getNombreUltimoFichero() string {

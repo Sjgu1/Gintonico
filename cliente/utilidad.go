@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -69,4 +70,34 @@ func streamToString(stream io.Reader) string {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(stream)
 	return buf.String()
+}
+
+func createFile(path string) {
+	// detect if file exists
+	var _, err = os.Stat(path)
+
+	// create file if not exists
+	if os.IsNotExist(err) {
+		var file, err = os.Create(path)
+		check(err)
+		defer file.Close()
+	}
+
+	fmt.Println("==> done creating file", path)
+}
+
+func writeFile(path string, content string) {
+	// open file using READ & WRITE permission
+	var file, err = os.OpenFile(path, os.O_RDWR, 0644)
+	check(err)
+	defer file.Close()
+
+	// write some text line-by-line to file
+	_, err = file.WriteString(content)
+
+	// save changes
+	err = file.Sync()
+	check(err)
+
+	fmt.Println("==> done writing to file")
 }
