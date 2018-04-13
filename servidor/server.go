@@ -268,7 +268,6 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 	}
 
 	return false
-
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
@@ -336,6 +335,7 @@ func registrarBloque(bloque Block) {
 	check(err)
 
 }
+
 func existeBloqueHash(hash string) (bool, string) {
 	// Abre el archivo json
 	jsonFile, err := os.Open("blocks.json")
@@ -497,6 +497,7 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 	}
 
 }
+
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 	// Abre el archivo json
 	jsonFile, err := os.Open("files.json")
