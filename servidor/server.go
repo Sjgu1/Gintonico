@@ -189,7 +189,6 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 	//buscar el hash en la base de datos:
 	//si ya existe, hay que asociar ese hash existente con el usuario al que pertence y tal y se devuelve true
 	//si no existe, entonces simplemente se devuelve false
-
 	parte := strconv.Itoa(cont)
 
 	var position BlockPosition
@@ -201,21 +200,16 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 		registrarBloqueFicheroUsuario(user, filename, position)
 		return true
 	}
-
 	return false
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerUpload")
-
 	r.ParseMultipartForm(32 << 20)
 	file, handler, err := r.FormFile("uploadfile")
 	check(err)
 	defer file.Close()
-	fmt.Fprintf(w, "%v", handler.Header)
-	// Split on /.
-	//fichero := decodeURLB64(handler.Filename) + ".part" + r.FormValue("Parte")
-	//createDirIfNotExist("./archivos/" + r.FormValue("Username"))
+	//fmt.Fprintf(w, "%v", handler.Header)
 
 	//Se crea un bloque con los datos recibidos
 	var position BlockPosition
@@ -238,9 +232,9 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	block.Hash = r.FormValue("Hash")
 	block.Block = path
 	registrarBloque(block)
-
 	//Se le asigna el bloque al par fichero-usuario
 	registrarBloqueFicheroUsuario(r.FormValue("Username"), decodeURLB64(handler.Filename), position)
+	cifrarFichero("./archivos/"+path, obtenerClaveCifrado("./archivos/"+path))
 }
 
 func registrarBloque(bloque Block) {
@@ -380,7 +374,9 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 		formatoArchivo := strings.Split(archivoSolicitado, ".")
 		var streamBytesTotal []byte
 		for i := 0; i < len(bloquesDeArchivo); i++ {
-			streamBytes, err := ioutil.ReadFile("./archivos/" + bloquesDeArchivo[i].Block)
+			ruta := "./archivos/" + bloquesDeArchivo[i].Block
+			streamBytes, err := ioutil.ReadFile(ruta)
+			streamBytes = decryptAESCFB(streamBytes, obtenerClaveCifrado(ruta))
 			check(err)
 			streamBytesTotal = append(streamBytesTotal[:], streamBytes[:]...)
 		}
@@ -473,19 +469,20 @@ func descifrarFichero(path string, clave string) {
 }
 
 func obtenerClaveCifrado(path string) string {
-	fmt.Println("Path: " + path)
+	//fmt.Println("Path: " + path)
 	nombreBloque := strings.Split(path, "/")
-	bloque := nombreBloque[1]
+	bloque := nombreBloque[len(nombreBloque)-1]
 	/* Obtener quien cifro el bloque*/
 	jsonBytes := leerJSON("./databases/blocks.json")
 	var blocks Blocks
 	json.Unmarshal(jsonBytes, &blocks)
 
 	var userPropietarioClave string
-
-	for i := 0; i < len(blocks.Blocks); i++ {
+	var encontrado = false
+	for i := 0; i < len(blocks.Blocks) && !encontrado; i++ {
 		if bloque == blocks.Blocks[i].Block {
 			userPropietarioClave = blocks.Blocks[i].User
+			encontrado = true
 		}
 	}
 
@@ -496,13 +493,13 @@ func obtenerClaveCifrado(path string) string {
 	json.Unmarshal(jsonBytes, &users)
 
 	var claveCifrado string
-
-	for i := 0; i < len(users.Users); i++ {
+	encontrado = false
+	for i := 0; i < len(users.Users) && !encontrado; i++ {
 		if userPropietarioClave == users.Users[i].User {
 			claveCifrado = users.Users[i].Cifrado
+			encontrado = true
 		}
 	}
-
 	/* FIN Obtener clave de cifrado el bloque*/
 	return claveCifrado
 }

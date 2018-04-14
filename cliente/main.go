@@ -241,8 +241,9 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	buf.ReadFrom(response.Body)
 	newStr := buf.String()
 	//fmt.Printf("%s\n", string(contents))
-	createFile(body.Find("archivoPedido").GetValue())
-	writeFile("./"+body.Find("archivoPedido").GetValue(), newStr)
+	createDirIfNotExist("./descargas/")
+	createFile("./descargas/" + body.Find("archivoPedido").GetValue())
+	writeFile("./descargas/"+body.Find("archivoPedido").GetValue(), newStr)
 
 	body.Find("texto").SetText(body.Find("archivoPedido").GetValue())
 }

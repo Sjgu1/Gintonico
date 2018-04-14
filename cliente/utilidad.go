@@ -83,7 +83,7 @@ func createFile(path string) {
 		defer file.Close()
 	}
 
-	fmt.Println("==> done creating file", path)
+	//fmt.Println("==> done creating file", path)
 }
 
 func writeFile(path string, content string) {
@@ -99,5 +99,14 @@ func writeFile(path string, content string) {
 	err = file.Sync()
 	check(err)
 
-	fmt.Println("==> done writing to file")
+	//fmt.Println("==> done writing to file")
+}
+
+func createDirIfNotExist(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			panic(err)
+		}
+	}
 }

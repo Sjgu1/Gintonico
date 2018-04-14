@@ -3,3 +3,5 @@
 *.exe~
 gintonico
 cliente
+/descargas
+/descargas/*
