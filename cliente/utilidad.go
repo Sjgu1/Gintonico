@@ -32,10 +32,10 @@ func sendServerPetition(data map[string][]string, route string) *http.Response {
 }
 
 // Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string, seed string) string {
-	salt := []byte(seed)
+func encriptarScrypt(cadena string, salt string) string {
+	saltBytes := []byte(salt)
 
-	dk, err := scrypt.Key([]byte(cadena), salt, 1<<15, 10, 1, 32)
+	dk, err := scrypt.Key([]byte(cadena), saltBytes, 1<<15, 10, 1, 32)
 	check(err)
 	return base64.StdEncoding.EncodeToString(dk)
 }

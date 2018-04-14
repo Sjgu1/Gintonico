@@ -1,10 +1,7 @@
-/nwjs
 *.exe
 *.exe~
-gintonico
 servidor
-users.json
 /archivos/*
 /archivos
-files.json
-blocks.json
+/databases
+/databases/*

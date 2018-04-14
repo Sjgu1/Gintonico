@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"io/ioutil"
 	mathrand "math/rand"
 
 	"os"
@@ -142,4 +143,30 @@ func encryptAESCFB(data []byte, keystring string) []byte {
 func deleteFile(path string) {
 	os.Remove(path)
 	//check(err)
+}
+
+func leerJSON(jsonNamefile string) []byte {
+	// Abre el archivo json
+	jsonFile, err := os.Open(jsonNamefile)
+	// if we os.Open returns an error then handle it
+	if err != nil {
+		fmt.Println(err)
+		// detect if file exists
+		var _, err = os.Stat(jsonNamefile)
+
+		// create file if not exists
+		if os.IsNotExist(err) {
+			var file, err = os.Create(jsonNamefile)
+			check(err)
+			defer file.Close()
+		}
+
+		fmt.Println("==> done creating file", jsonNamefile)
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+
+	// read our opened xmlFile as a byte array.
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	return byteValue
 }
