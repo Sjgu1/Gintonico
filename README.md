@@ -1,6 +1,6 @@
 # Gintónico - SDS
 
-Gintónico es un sistema de alojamiento de archivos en la nube (Arquitectura cliente/servidor). Está implementado con una de las mejores prácticas en seguridad en la actualidad. Esta disponible multiplataforma y tiene una interfaz gráfica para los clientes.
+Gintónico es un sistema de alojamiento de archivos en la nube (Arquitectura cliente/servidor). Está implementado con una de las mejores prácticas de seguridad en la actualidad. Esta disponible para Windows, MacOS y Linux, y tiene una interfaz gráfica en el cliente.
 
 
 ## Guía de instalación
@@ -38,7 +38,7 @@ Primero compilamos Gintónico con el comando:
 go build
 ```
 
-Una vez compilado el proyecto ya podremos ejecutar el cliente con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar estos comandos:
+Una vez compilado el proyecto ya podremos ejecutar el cliente con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar este comando:
 
 *Desde la carpeta cliente*
 Windows:
@@ -50,6 +50,7 @@ MacOS:
 ./nwjs/nwjs.app/Contents/MacOS/nwjs .
 ```
 
+Por último, para poner en funcionamiento el servidor solo habrá que iniciar el ejecutable que se habrá generado al ejecutar el comando go build anteriormente
 
 ## Librerías
 
@@ -58,17 +59,7 @@ MacOS:
 * [HTTPS Certs](https://github.com/kabukky/httpscerts) - Gestor de certificados HTTPS
 
 
-## Contributing
-
-Please read [CONTRIBUTING.md](#) for details on our code of conduct, and the process for submitting pull requests to us.
-
-
-## Versioning
-
-We use [SemVer](#) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
-
-## Authors
+## Autores
 
 * **Sergio Julio García Urdiales** - *Programador* - [Serge](#)
 * **Lawrence Rider García** - *Programador* - [Larry](http://www.larryrider.es)
@@ -79,6 +70,7 @@ Puedes ver también la lista de los [contribuidores](https://github.com/Sjgu1/Gi
 ## Licencia
 
 Este proyecto esta bajo la MIT Licencia - see the [LICENSE.md](LICENSE.md) file for details
+
 
 ## Acknowledgments
 
