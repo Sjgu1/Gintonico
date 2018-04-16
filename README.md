@@ -1,6 +1,7 @@
 # Gintónico - SDS
 
-Esta va a ser la mejor aplicacion en Go jamás vista.
+Gintónico es un sistema de alojamiento de archivos en la nube (Arquitectura cliente/servidor). Está implementado con una de las mejores prácticas en seguridad en la actualidad. Esta disponible multiplataforma y tiene una interfaz gráfica para los clientes.
+
 
 ## Guía de instalación
 
@@ -9,40 +10,33 @@ Siga estas instrucciones para obtener una copia de este proyecto funcionando cor
 
 ### Prerrequisitos
 
-Para empezar es necesario que tanto el lenguje esté bien instalado como los paths bien configurados (Depende de cada sistema operativo).
+Para empezar es necesario que tanto el lenguaje (Golang) esté bien instalado como los paths bien configurados (Depende de cada sistema operativo).
 
-Una vez dispongamos de los medios para poder compilar y ejecutar Go necesitaremos descargarnos las librerías:
-
+Una vez dispongamos de los medios para poder compilar y ejecutar Go necesitaremos descargarnos las librerías que se usan en el proyecto:
+*Ejecutar este comando tanto en la carpeta servidor como en el cliente*
 ```
 go get
 ```
 
-Ahora necesitaremos descargarnos NW.js para poder ejecutar y poner en funcionamiento la interfaz gráfica de Gintónico:
-
+Ahora necesitaremos descargarnos NW.js para poder ejecutar y poner en funcionamiento la interfaz gráfica del cliente de Gintónico:
+*Descargar el correspondiente a nuestro sistema operativo*
 ```
 https://nwjs.io/downloads/
 ```
 
-Una vez tengamos NW para el sistema que necesitemos, lo meteremos por ejemplo dentro del proyecto en una carpeta llamada "nwjs".
+Una vez tengamos NW para el sistema que necesitemos, lo copiaremos dentro del cliente en una carpeta llamada "nwjs".
+
 
 ### Instalando y ejecutando Gintónico
 
-Primero comprobaremos por seguridad que están todas las librerías instaladas de nuevo con el comando:
-
-```
-go get
-```
-
-Primero compilamos Gintónico desde la carpeta raíz del proyecto con el comando: 
-
+Primero compilamos Gintónico con el comando: 
+*Habrá que compilar el código tanto del cliente como del servidor*
 ```
 go build
 ```
 
-Una vez compilado el proyecto ya podremos ejecutar la aplicación con NW.js pasandole al ejecutable del mismo la carpeta raíz del proyecto, por ejemplo:
-
-(si se han seguido los pasos de prerrequisitos exactamente, tendremos una carpeta llamada nwjs dentro de la carpeta raíz del proyecto)
-
+Una vez compilado el proyecto ya podremos ejecutar el cliente con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar estos comandos:
+*Desde la carpeta cliente*
 Windows:
 ```
 .\nwjs\nw.exe .
@@ -52,32 +46,35 @@ MacOS:
 ./nwjs/nwjs.app/Contents/MacOS/nwjs .
 ```
 
-## Deployment
 
-Add additional notes about how to deploy this on a live system
-
-## Built With
+## Librerías
 
 * [GoWD](https://github.com/dtylman/gowd) - Interfaz Gráfica utilizada
+* [Mux](https://github.com/gorilla/mux) - Manejador de rutas HTTP
+* [HTTPS Certs](https://github.com/kabukky/httpscerts) - Gestor de certificados HTTPS
+
 
 ## Contributing
 
 Please read [CONTRIBUTING.md](#) for details on our code of conduct, and the process for submitting pull requests to us.
 
+
 ## Versioning
 
 We use [SemVer](#) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
+
 
 ## Authors
 
 * **Sergio Julio García Urdiales** - *Programador* - [Serge](#)
 * **Lawrence Rider García** - *Programador* - [Larry](http://www.larryrider.es)
 
-See also the list of [contributors](https://github.com/Sjgu1/Gintonico/contributors) who participated in this project.
+Puedes ver también la lista de los [contribuidores](https://github.com/Sjgu1/Gintonico/contributors) que han participado en este proyecto.
 
-## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+## Licencia
+
+Este proyecto esta bajo la MIT Licencia - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 

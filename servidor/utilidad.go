@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	mathrand "math/rand"
-
 	"os"
 
 	"golang.org/x/crypto/scrypt"
