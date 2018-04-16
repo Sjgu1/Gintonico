@@ -13,12 +13,14 @@ Siga estas instrucciones para obtener una copia de este proyecto funcionando cor
 Para empezar es necesario que tanto el lenguaje (Golang) esté bien instalado como los paths bien configurados (Depende de cada sistema operativo).
 
 Una vez dispongamos de los medios para poder compilar y ejecutar Go necesitaremos descargarnos las librerías que se usan en el proyecto:
+
 *Ejecutar este comando tanto en la carpeta servidor como en el cliente*
 ```
 go get
 ```
 
 Ahora necesitaremos descargarnos NW.js para poder ejecutar y poner en funcionamiento la interfaz gráfica del cliente de Gintónico:
+
 *Descargar el correspondiente a nuestro sistema operativo*
 ```
 https://nwjs.io/downloads/
@@ -29,13 +31,15 @@ Una vez tengamos NW para el sistema que necesitemos, lo copiaremos dentro del cl
 
 ### Instalando y ejecutando Gintónico
 
-Primero compilamos Gintónico con el comando: 
+Primero compilamos Gintónico con el comando:
+
 *Habrá que compilar el código tanto del cliente como del servidor*
 ```
 go build
 ```
 
 Una vez compilado el proyecto ya podremos ejecutar el cliente con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar estos comandos:
+
 *Desde la carpeta cliente*
 Windows:
 ```
