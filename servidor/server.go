@@ -90,34 +90,28 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	response(w, true, "Bienvenido a Gintónico")
 }
 
-//Person strutc
-type Person struct {
-	Login    []string `json:"login"`
-	Password []string `json:"password"`
-}
-
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerLogin")
-	r.ParseForm()
-	// es necesario parsear el formulario
+	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(r.Body)
-	s := buf.String()
-	bytes := []byte(s)
+	body := buf.Bytes()
 
-	var u Person
-	err := json.Unmarshal(bytes, &u)
+	type LoginJSON struct {
+		Login    []string `json:"login"`
+		Password []string `json:"password"`
+	}
+	var user LoginJSON
+	err := json.Unmarshal(body, &user)
 	check(err)
-	if validarLogin(u.Login[0], u.Password[0]) {
-
-		token := createJWT(u.Login[0])
+	if err == nil && validarLogin(user.Login[0], user.Password[0]) {
+		token := createJWT(user.Login[0])
 		w.Header().Add("Token", token)
-		guardarToken(token, u.Login[0])
+		guardarToken(token, user.Login[0])
 		//validarToken(token, r.Form.Get("login"))
 		response(w, true, token)
-
 	} else {
 		response(w, false, "Error al loguear")
 	}
@@ -158,7 +152,20 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
-	if validarRegister(r.Form.Get("register"), r.Form.Get("password"), r.Form.Get("confirm")) {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	body := buf.Bytes()
+
+	type RegisterJSON struct {
+		Register []string `json:"register"`
+		Password []string `json:"password"`
+		Confirm  []string `json:"confirm"`
+	}
+	var user RegisterJSON
+	err := json.Unmarshal(body, &user)
+	check(err)
+
+	if err == nil && validarRegister(user.Register[0], user.Password[0], user.Confirm[0]) {
 		response(w, true, "Registrado")
 	} else {
 		response(w, false, "Error al registrar")
@@ -207,28 +214,38 @@ func comprobarExisteUsuario(usuario string) bool {
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {
-	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
-
 	//fmt.Println("entro handlerHash")
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
-	contador, _ := strconv.Atoi(r.Form.Get("cont"))  // numero del orden de la parte del fichero
-	hash := r.Form.Get("hash")                       // hash de la parte del fichero
-	size, _ := strconv.Atoi(r.Form.Get("size"))      // tamaño de la parte del fichero
-	user := r.Form.Get("user")                       // usuario que sube el fichero
-	filename := decodeURLB64(r.Form.Get("filename")) // nombre del fichero original
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	body := buf.Bytes()
 
-	comprobar := comprobarHash(contador, hash, size, user, filename)
-	//fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
-	response(w, comprobar, "Hash comprobado")
-}
+	type BodyJSON struct {
+		Cont     []string `json:"cont"`
+		Hash     []string `json:"hash"`
+		Size     []string `json:"size"`
+		User     []string `json:"user"`
+		Filename []string `json:"filename"`
+	}
+	var bodyJSON BodyJSON
+	err := json.Unmarshal(body, &bodyJSON)
+	check(err)
 
-func handlerValidarToken(w http.ResponseWriter, r *http.Request) {
-	//	tokenRecibido := r.Header.Get("Authorization")
-	//	clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_"
-	//	valido := validarToken(tokenRecibido, r.Header.Get("Username"))
+	if err == nil {
+		contador, _ := strconv.Atoi(bodyJSON.Cont[0])  // numero del orden de la parte del fichero
+		hash := bodyJSON.Hash[0]                       // hash de la parte del fichero
+		size, _ := strconv.Atoi(bodyJSON.Size[0])      // tamaño de la parte del fichero
+		user := bodyJSON.User[0]                       // usuario que sube el fichero
+		filename := decodeURLB64(bodyJSON.Filename[0]) // nombre del fichero original
 
+		comprobar := comprobarHash(contador, hash, size, user, filename)
+		//fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
+		response(w, comprobar, "Hash comprobado")
+	} else {
+		response(w, false, "Error al comprobar")
+	}
 }
 
 func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
@@ -250,8 +267,6 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
-	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
-
 	//fmt.Println("Paso por handlerUpload")
 	r.ParseMultipartForm(32 << 20)
 	file, handler, err := r.FormFile("uploadfile")
@@ -375,7 +390,6 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 }
 
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
-	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
 	jsonBytes := leerJSON("./databases/files.json")
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
@@ -390,16 +404,16 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 			filesUser = append(filesUser, encodeURLB64(files.Files[i].File))
 		}
 	}
-	slc, _ := json.Marshal(filesUser)
-	w.Write(slc)
+	if len(filesUser) > 0 {
+		slc, _ := json.Marshal(filesUser)
+		w.Write(slc)
+	} else {
+		response(w, false, "No tienes ficheros subidos")
+	}
 }
 
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {
-
-	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
-
 	//fmt.Println("Paso por handlerFiles")
-
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
@@ -556,6 +570,17 @@ func obtenerClaveCifrado(path string) string {
 	return claveCifrado
 }
 
+func middlewareAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tokenValido := validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+		if tokenValido {
+			next.ServeHTTP(w, r)
+		} else {
+			response(w, false, "Error de autenticación")
+		}
+	})
+}
+
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
 	createDirIfNotExist("./archivos/")
@@ -566,7 +591,6 @@ func main() {
 
 	// Comprueba los certificados, si no existen se generan nuevos
 	err := httpscerts.Check("./certificados/cert.pem", "./certificados/key.pem")
-
 	if err != nil {
 		err = httpscerts.Generate("./certificados/cert.pem", "./certificados/key.pem", ":8081")
 		if err != nil {
@@ -578,12 +602,10 @@ func main() {
 	muxa.HandleFunc("/", handler)
 	muxa.HandleFunc("/login", handlerLogin)
 	muxa.HandleFunc("/register", handlerRegister)
-	muxa.HandleFunc("/checkhash", handlerHash)
-	muxa.HandleFunc("/upload", handlerUpload)
-	muxa.HandleFunc("/user/{username}", handlerShowUserFiles)
-	muxa.HandleFunc("/user/{username}/file/{filename}", handlerSendFile)
-
-	muxa.HandleFunc("/validarToken", handlerValidarToken)
+	muxa.Handle("/checkhash", middlewareAuth(http.HandlerFunc(handlerHash)))
+	muxa.Handle("/upload", middlewareAuth(http.HandlerFunc(handlerUpload)))
+	muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
+	muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile)))
 
 	srv := &http.Server{Addr: ":8081", Handler: muxa}
 

@@ -5,7 +5,6 @@ import (
 	"crypto/sha512"
 	"crypto/tls"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,16 +20,15 @@ func check(e error) {
 	}
 }
 
-func sendServerPetition(data map[string][]string, route string, username string) *http.Response {
+func sendServerPetition(method string, datos io.Reader, route string, contentType string) *http.Response {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
 
-	datos, err := json.Marshal(data)
-	req, err := http.NewRequest("POST", "https://localhost:8081"+route, bytes.NewReader(datos))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Add("Username", username)
+	req, err := http.NewRequest(method, "https://localhost:8081"+route, datos)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Add("Username", login)
 	req.Header.Add("Authorization", token)
 	r, err := client.Do(req)
 

@@ -1,5 +1,7 @@
 package main
 
+import "github.com/dtylman/gowd"
+
 func vistaLogin() string {
 	return `<div class="container">
 		<div class="row">
@@ -182,4 +184,21 @@ func vistaPrincipal() string {
 	</div>
 	
 	</nav>`
+}
+
+func goLogin(sender *gowd.Element, event *gowd.EventElement) {
+	mostrar = "login"
+	login = ""
+	token = ""
+	main()
+}
+
+func goRegister(sender *gowd.Element, event *gowd.EventElement) {
+	mostrar = "register"
+	main()
+}
+
+func goPrincipal(sender *gowd.Element, event *gowd.EventElement) {
+	mostrar = "principal"
+	main()
 }

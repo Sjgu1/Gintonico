@@ -32,7 +32,6 @@ func check(e error) {
 }
 
 func createJWT(username string) string {
-
 	// Embed User information to `token`
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"), &UserStruct{
 		Username: username})
@@ -50,27 +49,30 @@ func createJWT(username string) string {
 	}
 	return tokenstring
 }
+
 func validarToken(tokenRecibido string, username string) bool {
 	clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_"
 	token, err := jwt.Parse(tokenRecibido, func(token *jwt.Token) (interface{}, error) {
 		return []byte(clavemaestra), nil
 	})
-	check(err)
+	//check(err)
 
-	//claims := make(jwt.MapClaims)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["exp"].(float64) < float64(time.Now().Unix()) {
+	/*if claims["exp"].(float64) < float64(time.Now().Unix()) {
 		//Aqui habria que deolver que el token ha expirado
 		//fmt.Println(false)
 		return false
-	}
-
-	if claims["aud"].(string) != username {
-		//fmt.Println(false)
+	}*/
+	if err != nil || token == nil { //ya valida tanto el tiempo de expiracion como si se ha firmado bien etc
+		fmt.Println("Token incorrecto")
 		return false
 	}
-	//fmt.Println(true)
+
+	//claims := make(jwt.MapClaims)
+	claims := token.Claims.(jwt.MapClaims)
+	if claims["aud"].(string) != username {
+		fmt.Println("Usuario de token incorrecto")
+		return false
+	}
 	return true
 }
 
@@ -84,24 +86,11 @@ func encriptarScrypt(cadena string, seed string) string {
 }
 
 func encodeURLB64(cadena string) string {
-	//StdEncoding
 	return base64.URLEncoding.EncodeToString([]byte(cadena))
 }
 
 func decodeURLB64(cadena string) string {
-	//StdEncoding
 	decode, _ := base64.URLEncoding.DecodeString(cadena)
-	return string(decode[:])
-}
-
-func encodeB64(cadena string) string {
-	//StdEncoding
-	return base64.StdEncoding.EncodeToString([]byte(cadena))
-}
-
-func decodeB64(cadena string) string {
-	//StdEncoding
-	decode, _ := base64.StdEncoding.DecodeString(cadena)
 	return string(decode[:])
 }
 
@@ -202,7 +191,7 @@ func leerJSON(jsonNamefile string) []byte {
 	jsonFile, err := os.Open(jsonNamefile)
 	// if we os.Open returns an error then handle it
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		// detect if file exists
 		var _, err = os.Stat(jsonNamefile)
 
