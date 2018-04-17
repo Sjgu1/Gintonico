@@ -89,9 +89,12 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	if respuesta.Ok == true {
 		login = usuario
 		token = response.Header.Get("Token")
-		body.Find("texto").SetText(response.Header.Get("Token"))
+
 		cambiarVista("principal")
 		actualizarVista(nil, nil)
+
+		//body.Find("texto").SetText(token)
+
 	}
 }
 
@@ -222,8 +225,10 @@ func enviarDatos(data []byte, filename string, parte string, hash string) {
 	client := &http.Client{Transport: tr}
 	req, err := http.NewRequest("POST", targetURL, bodyBuf)
 	req.Header.Set("Content-Type", contentType)
+
 	req.Header.Add("Authorization", token)
 	req.Header.Add("Username", login)
+
 	resp, err := client.Do(req)
 	//resp, err := client.Post(targetURL, contentType, bodyBuf)
 	check(err)

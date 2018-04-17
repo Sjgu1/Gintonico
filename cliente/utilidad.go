@@ -31,6 +31,7 @@ func sendServerPetition(data map[string][]string, route string, username string)
 	req, err := http.NewRequest("POST", "https://localhost:8081"+route, bytes.NewReader(datos))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Username", username)
+	req.Header.Add("Authorization", token)
 	r, err := client.Do(req)
 
 	//r, err := client.PostForm("https://localhost:8081"+route, data) // enviamos por POST
