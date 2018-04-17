@@ -8,17 +8,46 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	mathrand "math/rand"
 	"os"
+	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
 
 	"golang.org/x/crypto/scrypt"
 )
+
+//UserStruct para el token
+type UserStruct struct {
+	Username string `json:"username"`
+	jwt.StandardClaims
+}
 
 // función para comprobar errores (ahorra escritura)
 func check(e error) {
 	if e != nil {
 		fmt.Println(e.Error())
 	}
+}
+
+func createJWT(username string) string {
+
+	// Embed User information to `token`
+	token := jwt.NewWithClaims(jwt.GetSigningMethod("HS256"), &UserStruct{
+		Username: username})
+
+	claims := make(jwt.MapClaims)
+	claims["exp"] = time.Now().Add(time.Minute * 1).Unix()
+	claims["iat"] = time.Now().Unix()
+	token.Claims = claims
+	// token -> string. Only server knows this secret (foobar).
+	clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_"
+	tokenstring, err := token.SignedString([]byte(clavemaestra))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return tokenstring
 }
 
 // Devuelve el string de la cadena encriptada

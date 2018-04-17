@@ -96,7 +96,9 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
 	if validarLogin(r.Form.Get("login"), r.Form.Get("password")) {
-		response(w, true, "Logeado")
+		token := createJWT(r.Form.Get("login"))
+		response(w, true, token)
+
 	} else {
 		response(w, false, "Error al loguear")
 	}

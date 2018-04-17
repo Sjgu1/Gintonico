@@ -86,8 +86,9 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 
 	if respuesta.Ok == true {
 		login = usuario
-		cambiarVista("principal")
-		actualizarVista(nil, nil)
+		body.Find("texto").SetText(buf.String())
+		//cambiarVista("principal")
+		//actualizarVista(nil, nil)
 	}
 }
 
