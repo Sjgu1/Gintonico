@@ -167,10 +167,9 @@ func enviarFichero(ruta string, filename string) {
 
 func enviarParteFichero(cont int, parte []byte, tam int, checkHashURL string, filename string) {
 	//preparar peticion
-	//hash := hashSHA256(data)
 	data := url.Values{} // estructura para contener los valores
 	contador := strconv.Itoa(cont)
-	hash := hashSHA256(parte)
+	hash := hashSHA512(parte)
 	size := strconv.Itoa(tam)
 	data.Set("cont", contador)
 	data.Set("hash", hex.EncodeToString(hash[:]))

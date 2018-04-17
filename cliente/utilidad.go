@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -71,8 +71,8 @@ func decodeB64(cadena string) string {
 	return string(decode[:])
 }
 
-func hashSHA256(datos []byte) [32]byte {
-	return sha256.Sum256(datos)
+func hashSHA512(datos []byte) [64]byte {
+	return sha512.Sum512(datos)
 }
 
 func streamToString(stream io.Reader) string {
