@@ -62,14 +62,15 @@ func validarToken(tokenRecibido string, username string) bool {
 
 	if claims["exp"].(float64) < float64(time.Now().Unix()) {
 		//Aqui habria que deolver que el token ha expirado
+		//fmt.Println(false)
 		return false
 	}
 
-	fmt.Println(claims["aud"].(string))
 	if claims["aud"].(string) != username {
-		//Aqui hab
+		//fmt.Println(false)
 		return false
 	}
+	//fmt.Println(true)
 	return true
 }
 

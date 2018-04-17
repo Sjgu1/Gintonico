@@ -111,11 +111,10 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(bytes, &u)
 	check(err)
 	if validarLogin(u.Login[0], u.Password[0]) {
-		fmt.Println(":ed")
 
-		token := createJWT(r.Form.Get("login"))
-		w.Header().Set("Token", token)
-		guardarToken(token, r.Form.Get("login"))
+		token := createJWT(u.Login[0])
+		w.Header().Add("Token", token)
+		guardarToken(token, u.Login[0])
 		//validarToken(token, r.Form.Get("login"))
 		response(w, true, token)
 
@@ -208,8 +207,7 @@ func comprobarExisteUsuario(usuario string) bool {
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Header.Get("Authorization"))
-	//validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
 
 	//fmt.Println("entro handlerHash")
 	r.ParseForm()                                // es necesario parsear el formulario
@@ -397,17 +395,15 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Header.Get("Authorization"))
-	fmt.Println(r.Header.Get("Username"))
-	fmt.Println("Estoy en el enviar")
-	//validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+
+	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
 
 	//fmt.Println("Paso por handlerFiles")
 
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
-	fmt.Println(result)
+	//fmt.Println(result)
 	userSolicitante := result[len(result)-3]
 	archivoSolicitado := decodeURLB64(result[len(result)-1])
 
