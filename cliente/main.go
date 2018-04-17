@@ -20,6 +20,7 @@ import (
 var body *gowd.Element
 var mostrar = "login"
 var login = ""
+var token = ""
 
 type resp struct {
 	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
@@ -76,7 +77,7 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	data.Set("login", usuario)
 	data.Set("password", encriptarScrypt(pass, usuario))
 
-	response := sendServerPetition(data, "/login")
+	response := sendServerPetition(data, "/login", usuario)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
 
@@ -84,11 +85,13 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	err := json.Unmarshal(buf.Bytes(), &respuesta)
 	check(err)
 
+	body.Find("texto").SetText(buf.String())
 	if respuesta.Ok == true {
 		login = usuario
-		body.Find("texto").SetText(buf.String())
-		//cambiarVista("principal")
-		//actualizarVista(nil, nil)
+		token = response.Header.Get("Token")
+		body.Find("texto").SetText(response.Header.Get("Token"))
+		cambiarVista("principal")
+		actualizarVista(nil, nil)
 	}
 }
 
@@ -102,7 +105,7 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 	data.Set("password", encriptarScrypt(pass, usuario))
 	data.Set("confirm", encriptarScrypt(confirm, usuario))
 
-	response := sendServerPetition(data, "/register")
+	response := sendServerPetition(data, "/register", usuario)
 
 	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 	buf := new(bytes.Buffer)
@@ -175,7 +178,8 @@ func enviarParteFichero(cont int, parte []byte, tam int, checkHashURL string, fi
 	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash[:]) + " size: " + size + " user: " + login + " filename: " + filename
 	body.Find("texto1").SetText(imprimir)
 
-	response := sendServerPetition(data, checkHashURL)
+	/**************************** conseguir usuario *************************/
+	response := sendServerPetition(data, checkHashURL, login)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
 
@@ -216,7 +220,12 @@ func enviarDatos(data []byte, filename string, parte string, hash string) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
-	resp, err := client.Post(targetURL, contentType, bodyBuf)
+	req, err := http.NewRequest("POST", targetURL, bodyBuf)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Add("Authorization", token)
+	req.Header.Add("Username", login)
+	resp, err := client.Do(req)
+	//resp, err := client.Post(targetURL, contentType, bodyBuf)
 	check(err)
 
 	defer resp.Body.Close()
@@ -231,8 +240,13 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	client := &http.Client{Transport: tr}
 
 	filename := encodeURLB64(body.Find("archivoPedido").GetValue())
+	req, err := http.NewRequest("POST", "https://localhost:8081/user/"+login+"/file/"+filename, nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Add("Authorization", token)
+	req.Header.Add("Username", login)
+	response, err := client.Do(req)
 
-	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+filename, "application/json", nil) // Pedimos Por get
+	//response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+filename, "application/json", nil) // Pedimos Por get
 	check(err)
 
 	defer response.Body.Close()
@@ -256,7 +270,11 @@ func peticionNombreFicheros() string {
 	client := &http.Client{Transport: tr}
 	respuesta := ""
 	if login != "" {
-		r, err := client.Get("https://localhost:8081/user/" + login) // Pedimos Por get
+		req, err := http.NewRequest("GET", "https://localhost:8081/user/"+login, nil)
+		req.Header.Add("Authorization", token)
+		req.Header.Add("Username", login)
+		r, err := client.Do(req)
+		//	r, err := client.Get("https://localhost:8081/user/" + login) // Pedimos Por get
 		check(err)
 
 		//` `

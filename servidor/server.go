@@ -40,6 +40,7 @@ type User struct {
 	Password string `json:"password"`
 	Salt     string `json:"salt"`
 	Cifrado  string `json:"cifrado"`
+	Token    string `json:"token"`
 }
 
 // Block Estructura de bloque
@@ -89,14 +90,33 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	response(w, true, "Bienvenido a Gintónico")
 }
 
+//Person strutc
+type Person struct {
+	Login    []string `json:"login"`
+	Password []string `json:"password"`
+}
+
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	//fmt.Println("Paso por handlerLogin")
-
-	r.ParseForm()                                // es necesario parsear el formulario
+	r.ParseForm()
+	// es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
-	if validarLogin(r.Form.Get("login"), r.Form.Get("password")) {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	s := buf.String()
+	bytes := []byte(s)
+
+	var u Person
+	err := json.Unmarshal(bytes, &u)
+	check(err)
+	if validarLogin(u.Login[0], u.Password[0]) {
+		fmt.Println(":ed")
+
 		token := createJWT(r.Form.Get("login"))
+		w.Header().Set("Token", token)
+		guardarToken(token, r.Form.Get("login"))
+		//validarToken(token, r.Form.Get("login"))
 		response(w, true, token)
 
 	} else {
@@ -116,6 +136,23 @@ func validarLogin(login string, password string) bool {
 		}
 	}
 	return false
+}
+
+func guardarToken(token string, user string) {
+	jsonBytes := leerJSON("./databases/users.json")
+	var users Users
+	json.Unmarshal(jsonBytes, &users)
+
+	var contador = 0
+	for i := 0; i < len(users.Users); i++ {
+		if users.Users[i].User == user {
+			contador = i
+		}
+	}
+	users.Users[contador].Token = token
+	usersJSON, _ := json.Marshal(users)
+	err := ioutil.WriteFile("./databases/users.json", usersJSON, 0644)
+	check(err)
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +208,9 @@ func comprobarExisteUsuario(usuario string) bool {
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.Header.Get("Authorization"))
+	//validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+
 	//fmt.Println("entro handlerHash")
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
@@ -184,6 +224,13 @@ func handlerHash(w http.ResponseWriter, r *http.Request) {
 	comprobar := comprobarHash(contador, hash, size, user, filename)
 	//fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
 	response(w, comprobar, "Hash comprobado")
+}
+
+func handlerValidarToken(w http.ResponseWriter, r *http.Request) {
+	//	tokenRecibido := r.Header.Get("Authorization")
+	//	clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_"
+	//	valido := validarToken(tokenRecibido, r.Header.Get("Username"))
+
 }
 
 func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
@@ -205,6 +252,8 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
+	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+
 	//fmt.Println("Paso por handlerUpload")
 	r.ParseMultipartForm(32 << 20)
 	file, handler, err := r.FormFile("uploadfile")
@@ -328,6 +377,7 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 }
 
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
+	validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
 	jsonBytes := leerJSON("./databases/files.json")
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
@@ -347,6 +397,11 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.Header.Get("Authorization"))
+	fmt.Println(r.Header.Get("Username"))
+	fmt.Println("Estoy en el enviar")
+	//validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+
 	//fmt.Println("Paso por handlerFiles")
 
 	u, err := url.Parse(r.URL.String())
@@ -531,6 +586,8 @@ func main() {
 	muxa.HandleFunc("/upload", handlerUpload)
 	muxa.HandleFunc("/user/{username}", handlerShowUserFiles)
 	muxa.HandleFunc("/user/{username}/file/{filename}", handlerSendFile)
+
+	muxa.HandleFunc("/validarToken", handlerValidarToken)
 
 	srv := &http.Server{Addr: ":8081", Handler: muxa}
 

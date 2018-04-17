@@ -40,6 +40,7 @@ func createJWT(username string) string {
 	claims := make(jwt.MapClaims)
 	claims["exp"] = time.Now().Add(time.Minute * 1).Unix()
 	claims["iat"] = time.Now().Unix()
+	claims["aud"] = username
 	token.Claims = claims
 	// token -> string. Only server knows this secret (foobar).
 	clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_"
@@ -48,6 +49,28 @@ func createJWT(username string) string {
 		log.Fatalln(err)
 	}
 	return tokenstring
+}
+func validarToken(tokenRecibido string, username string) bool {
+	clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_"
+	token, err := jwt.Parse(tokenRecibido, func(token *jwt.Token) (interface{}, error) {
+		return []byte(clavemaestra), nil
+	})
+	check(err)
+
+	//claims := make(jwt.MapClaims)
+	claims := token.Claims.(jwt.MapClaims)
+
+	if claims["exp"].(float64) < float64(time.Now().Unix()) {
+		//Aqui habria que deolver que el token ha expirado
+		return false
+	}
+
+	fmt.Println(claims["aud"].(string))
+	if claims["aud"].(string) != username {
+		//Aqui hab
+		return false
+	}
+	return true
 }
 
 // Devuelve el string de la cadena encriptada
