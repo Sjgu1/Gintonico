@@ -26,10 +26,10 @@ type resp struct {
 }
 
 func main() {
-	body = bootstrap.NewContainer(false)
-	//body.SetAttribute("style", "background-color:#FF654E")
+	body = bootstrap.NewElement("div", "wrapper")
+	body.SetAttribute("style", "background-color:#FF654E; height: 100%")
 
-	logo := `<div style="margin:0 auto;width:40%;"><img src="img/logo_alargado.png" style="width:100%;margin:0 auto"/></div><br/><br/>`
+	logo := `<div style="margin:0 auto;width:40%;"><img src="assets/img/logo_alargado.png" style="width:100%;margin:0 auto"/></div>`
 
 	switch mostrar {
 	case "login":
@@ -46,6 +46,7 @@ func main() {
 		break
 	case "principal":
 		body.AddHTML(vistaPrincipal(), nil)
+		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
 		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
@@ -247,20 +248,9 @@ func peticionNombreFicheros() string {
 	a := strings.Split(buf.String(), "\"")
 	for i, n := range a {
 		if i%2 != 0 {
-			respuesta += `<div class="file-box">
-				<div class="file">
-					<a href="#" onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
-						<span class="corner"></span>
-						<div class="icon">
-							<i class="fa fa-file"></i>
-						</div>
-						<div class="file-name">
-						` + decodeURLB64(n) + `
-							<br>
-						</div>
-					</a>
-				</div>
-			</div>`
+			respuesta += `<a href="#" class="list-group-item" 
+				onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
+					` + decodeURLB64(n) + `</a>`
 		}
 	}
 	return respuesta
