@@ -161,20 +161,36 @@ func vistaPrincipal() string {
 			</div>
 			<div class="col-md-9">
 				<div class="row" style="margin: 0 auto;">
-					<div class="col-lg-12"><div class="list-group">
-					` + peticionNombreFicheros() + `
-					</div></div>
+					<div class="col-lg-12">
+						<div class="box">
+							<div class="box-header">
+								<h3 class="box-title">Ficheros</h3>
+							</div>
+							<div class="box-body">
+								<table id="tabla" class="table table-striped table-bordered dataTable no-footer" style="width:100%">
+									<thead>
+										<tr>
+											<th>Archivo</th>
+										</tr>
+									</thead>
+									<tbody>
+										` + peticionNombreFicheros() + `
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 			<p id="texto"/><p id="texto1"/><p id="texto2"/>
 		</div>
 	</div>
 	<footer class="main-footer">
-    <div class="container">
-		<div class="pull-right hidden-xs">
-			<b>Version: </b>&nbsp;1.0.0
-		</div>
-		<strong>Copyright © 2018&nbsp;<a href="#"> Gintónico </a>.</strong>&nbsp;&nbsp;&nbsp;Todos los derechos reservados.
+		<div class="container">
+			<div class="pull-right hidden-xs">
+				<b>Version: </b>&nbsp;1.0.0
+			</div>
+			<strong>Copyright © 2018&nbsp;<a href="#"> Gintónico </a>.</strong>&nbsp;&nbsp;&nbsp;Todos los derechos reservados.
 		</div>
 	</footer>
 	`

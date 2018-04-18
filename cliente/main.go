@@ -243,14 +243,17 @@ func peticionNombreFicheros() string {
 		//Cerrar sesion
 		return respuestaJSON.Msg
 	}
-
 	respuesta := ""
 	a := strings.Split(buf.String(), "\"")
 	for i, n := range a {
 		if i%2 != 0 {
-			respuesta += `<a href="#" class="list-group-item" 
-				onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
-					` + decodeURLB64(n) + `</a>`
+			/*respuesta += `<a href="#" class="list-group-item"
+			onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
+				` + decodeURLB64(n) + `</a>`*/
+			respuesta += `<tr>
+				<td><a href="#" onclick="seleccionarArchivo('` +
+				decodeURLB64(n) + `')">` + decodeURLB64(n) + `</a></td>
+			</tr>`
 		}
 	}
 	return respuesta
