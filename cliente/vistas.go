@@ -117,68 +117,39 @@ func vistaPrincipal() string {
 		</br>
 		<div class="row" style="margin: 0 auto;">
 			<div class="col-md-3">
-				<div class="ibox float-e-margins">
-					<div class="ibox-content">
-						<div class="file-manager">
-							<h5>Show:</h5>
-							<a href="#" class="file-control active">Ale</a>
-							<a href="#" class="file-control">Documents</a>
-							<a href="#" class="file-control">Audio</a>
-							<a href="#" class="file-control">Images</a>
-							<div class="hr-line-dashed"></div>
-							<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
-							<input type="text" id="route" style="display: none" />
-							<input type="text" id="filename" style="display: none" />
-							<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block"/>
-							<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block"> Subir </button>
-							<button type="button"  style="display: none" id="buttonPedir" class="btn btn-primary btn-block">Pedir</button>
-							<input type="text" id="archivoPedido" style="display: none" />
-							<div class="hr-line-dashed"></div>
-							<h5>Folders</h5>
-							<ul class="folder-list" style="padding: 0">
-								<li><a href=""><i class="fa fa-folder"></i> Files</a></li>
-								<li><a href=""><i class="fa fa-folder"></i> Pictures</a></li>
-								<li><a href=""><i class="fa fa-folder"></i> Web pages</a></li>
-								<li><a href=""><i class="fa fa-folder"></i> Illustrations</a></li>
-								<li><a href=""><i class="fa fa-folder"></i> Films</a></li>
-								<li><a href=""><i class="fa fa-folder"></i> Books</a></li>
-							</ul>
-							<h5 class="tag-title">Tags</h5>
-							<ul class="tag-list" style="padding: 0">
-								<li><a href="">Family</a></li>
-								<li><a href="">Work</a></li>
-								<li><a href="">Home</a></li>
-								<li><a href="">Children</a></li>
-								<li><a href="">Holidays</a></li>
-								<li><a href="">Music</a></li>
-								<li><a href="">Photography</a></li>
-								<li><a href="">Film</a></li>
-							</ul>
-							<div class="clearfix"></div>
-						</div>
+				<div class="box">
+					<div class="box-header">
+						<h3 class="box-title">Gintónico</h3>
+					</div>
+					<div class="box-body">
+						<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
+						<input type="text" id="route" style="display: none" />
+						<input type="text" id="filename" style="display: none" />
+						<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block"/>
+						<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block"> Subir </button>
+						<button type="button"  style="display: none" id="buttonPedir" class="btn btn-primary btn-block">Pedir</button>
+						<input type="text" id="archivoPedido" style="display: none" />
+							
+						<div class="clearfix"></div>
 					</div>
 				</div>
 			</div>
 			<div class="col-md-9">
-				<div class="row" style="margin: 0 auto;">
-					<div class="col-lg-12">
-						<div class="box">
-							<div class="box-header">
-								<h3 class="box-title">Ficheros</h3>
-							</div>
-							<div class="box-body">
-								<table id="tabla" class="table table-striped table-bordered dataTable no-footer" style="width:100%">
-									<thead>
-										<tr>
-											<th>Archivo</th>
-										</tr>
-									</thead>
-									<tbody>
-										` + peticionNombreFicheros() + `
-									</tbody>
-								</table>
-							</div>
-						</div>
+				<div class="box">
+					<div class="box-header">
+						<h3 class="box-title">Ficheros</h3>
+					</div>
+					<div class="box-body">
+						<table id="tabla" class="table table-striped table-bordered dataTable no-footer" style="width:100%">
+							<thead>
+								<tr>
+									<th>Archivo</th>
+								</tr>
+							</thead>
+							<tbody>
+								` + peticionNombreFicheros() + `
+							</tbody>
+						</table>
 					</div>
 				</div>
 			</div>

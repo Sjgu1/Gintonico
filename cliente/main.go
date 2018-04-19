@@ -179,6 +179,7 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 	check(err)
 
 	if err != nil || (respuesta.Ok == false && respuesta.Msg != "Hash comprobado") {
+		goLogin(nil, nil)
 		//mostrar error y si es posible que esta funcion devuelva un error y el bucle de arriba pare
 	} else if respuesta.Ok == false && respuesta.Msg == "Hash comprobado" { //el hash no existe en el servidor (la parte no se ha subido nunca)
 		enviarDatos(parte, filename, contador, hex.EncodeToString(hash[:]))
@@ -220,6 +221,7 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	if err == nil && respuestaJSON.Ok == false {
 		//Cerrar sesion
+		goLogin(nil, nil)
 		body.Find("texto").SetText(respuestaJSON.Msg)
 	} else {
 		respuesta := buf.String()
@@ -241,7 +243,9 @@ func peticionNombreFicheros() string {
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	if err == nil && respuestaJSON.Ok == false {
 		//Cerrar sesion
-		return respuestaJSON.Msg
+		//return respuestaJSON.Msg
+		goLogin(nil, nil)
+		return ""
 	}
 	respuesta := ""
 	a := strings.Split(buf.String(), "\"")
