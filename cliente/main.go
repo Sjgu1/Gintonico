@@ -244,7 +244,7 @@ func peticionNombreFicheros() string {
 	if err == nil && respuestaJSON.Ok == false {
 		//Cerrar sesion
 		//return respuestaJSON.Msg
-		goLogin(nil, nil)
+		//goLogin(nil, nil)
 		return ""
 	}
 	respuesta := ""
