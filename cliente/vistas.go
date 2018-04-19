@@ -113,7 +113,7 @@ func vistaPrincipal() string {
 			</div>
 		</div>
 	</nav></header>
-	<div class="content-wrapper">
+	<div class="content-wrapper" style="min-height:unset;">
 		</br>
 		<div class="row" style="margin: 0 auto;">
 			<div class="col-md-3">

@@ -27,24 +27,25 @@ type resp struct {
 
 func main() {
 	body = bootstrap.NewElement("div", "wrapper")
-	body.SetAttribute("style", "background-color:#FF654E; height: 100%")
-
 	logo := `<div style="margin:0 auto;width:40%;"><img src="assets/img/logo_alargado.png" style="width:100%;margin:0 auto"/></div>`
 
 	switch mostrar {
 	case "login":
+		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
 		body.AddHTML(logo, nil)
 		body.AddHTML(vistaLogin(), nil)
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendLogin)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
 		break
 	case "register":
+		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
 		body.AddHTML(logo, nil)
 		body.AddHTML(vistaRegister(), nil)
 		body.Find("register-submit").OnEvent(gowd.OnClick, sendRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
 		break
 	case "principal":
+		body.SetAttribute("style", "background-color:#ecf0f5; height: 100%")
 		body.AddHTML(vistaPrincipal(), nil)
 		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
