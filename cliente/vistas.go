@@ -134,7 +134,7 @@ func vistaPrincipal() string {
 					</div>
 				</div>
 			</div>
-			<div class="col-md-9">
+			<div class="col-md-9" style="margin-bottom: 40px;">
 				<div class="box">
 					<div class="box-header">
 						<h3 class="box-title">Ficheros</h3>
@@ -156,7 +156,7 @@ func vistaPrincipal() string {
 			<p id="texto"/><p id="texto1"/><p id="texto2"/>
 		</div>
 	</div>
-	<footer class="main-footer">
+	<footer class="main-footer" style="bottom:0;position:fixed;width:100%">
 		<div class="container">
 			<div class="pull-right hidden-xs">
 				<b>Version: </b>&nbsp;1.0.0

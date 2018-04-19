@@ -37,7 +37,7 @@ func createJWT(username string) string {
 		Username: username})
 
 	claims := make(jwt.MapClaims)
-	claims["exp"] = time.Now().Add(time.Minute * 1).Unix()
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 	claims["iat"] = time.Now().Unix()
 	claims["aud"] = username
 	token.Claims = claims

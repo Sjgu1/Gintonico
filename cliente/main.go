@@ -219,7 +219,7 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	buf.ReadFrom(response.Body)
 	var respuestaJSON resp
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
-	if err == nil && respuestaJSON.Ok == false {
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
 		//Cerrar sesion
 		goLogin(nil, nil)
 		body.Find("texto").SetText(respuestaJSON.Msg)
