@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
@@ -183,11 +182,11 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 		goLogin(nil, nil)
 		//mostrar error y si es posible que esta funcion devuelva un error y el bucle de arriba pare
 	} else if respuesta.Ok == false && respuesta.Msg == "Hash comprobado" { //el hash no existe en el servidor (la parte no se ha subido nunca)
-		enviarDatos(parte, filename, contador, hex.EncodeToString(hash[:]))
+		enviarDatos(parte, filename, contador, hex.EncodeToString(hash[:]), size)
 	}
 }
 
-func enviarDatos(data []byte, filename string, parte string, hash string) {
+func enviarDatos(data []byte, filename string, parte string, hash string, size string) {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
 	err := bodyWriter.WriteField("Username", login)
@@ -195,6 +194,8 @@ func enviarDatos(data []byte, filename string, parte string, hash string) {
 	err = bodyWriter.WriteField("Parte", parte)
 	check(err)
 	err = bodyWriter.WriteField("Hash", hash)
+	check(err)
+	err = bodyWriter.WriteField("Size", size)
 	check(err)
 
 	// this step is very important
@@ -242,24 +243,35 @@ func peticionNombreFicheros() string {
 	buf.ReadFrom(response.Body)
 	var respuestaJSON resp
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
-	if err == nil && respuestaJSON.Ok == false {
+	respuesta := ""
+
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
 		//Cerrar sesion
 		//return respuestaJSON.Msg
 		//goLogin(nil, nil)
-		return ""
+		return respuesta
 	}
-	respuesta := ""
-	a := strings.Split(buf.String(), "\"")
-	for i, n := range a {
-		if i%2 != 0 {
-			/*respuesta += `<a href="#" class="list-group-item"
-			onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
-				` + decodeURLB64(n) + `</a>`*/
+
+	type FilesJSON struct {
+		Filename []string `json:"filename"`
+		Size     []string `json:"size"`
+	}
+	var filesJSON FilesJSON
+	err = json.Unmarshal(buf.Bytes(), &filesJSON)
+	if err == nil && len(filesJSON.Filename) != 0 && len(filesJSON.Size) != 0 && len(filesJSON.Filename) == len(filesJSON.Size) {
+		for i := range filesJSON.Filename {
+			//respuesta += filesJSON.Filename[i] + filesJSON.Size[i]
 			respuesta += `<tr>
-				<td><a href="#" onclick="seleccionarArchivo('` +
-				decodeURLB64(n) + `')">` + decodeURLB64(n) + `</a></td>
+				<td>
+				<a href="#" onclick="seleccionarArchivo('` +
+				decodeURLB64(filesJSON.Filename[i]) + `')">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
+				</td>
+				<td>
+				<label>` + filesJSON.Size[i] + `</label>
+				</td>
 			</tr>`
 		}
+
 	}
 	return respuesta
 }

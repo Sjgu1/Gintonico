@@ -1,3 +1,28 @@
+.btn-principal {
+  background-color: #FF654E;
+  border-color: rgb(197, 78, 59);
+}
+
+.btn-principal:active {
+  background-color: rgb(243, 96, 73);
+  border-color: rgb(197, 78, 59);
+}
+
+.btn-principal:hover {
+  background-color: rgb(219, 88, 68);
+  border-color: rgb(197, 78, 59);
+}
+
+.btn-principal:focus {
+  background-color: rgb(194, 78, 60);
+  border-color: rgb(0, 0, 0);
+}
+
+.btn-principal:active:focus, .btn-principal:active:hover {
+  background-color: rgb(194, 78, 60);
+  border-color: rgb(0, 0, 0);
+}
+
 .file-box {
   float: left;
   width: 33.3%;

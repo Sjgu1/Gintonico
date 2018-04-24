@@ -86,19 +86,19 @@ func vistaRegister() string {
 }
 
 func vistaPrincipal() string {
-	return `<header class="main-header"><nav class="navbar navbar-static-top">
+	return `<header class="main-header"><nav class="navbar navbar-static-top" style="background-color:#FF654E">
 		<div class="container-fluid">
-			<div class="navbar-header">
+			<div class="navbar-header" style="margin-right: 0; margin-left: 0;">
 				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse">
 					<i class="fa fa-bars"></i>
 				</button>
-				<a class="navbar-brand" href="#" id="recargar">Gintónico</a>
+				<a class="navbar-left" href="#" id="recargar"><img style="max-height: 45px;margin-right: 15px;" src="assets/img/logo_alargado2.png"/></a>
 			</div>
 			<div class="collapse navbar-collapse" id="navbar-collapse">
 				<ul class="nav navbar-nav">
 				<li class="active"><a href="#">Principal <span class="sr-only">(current)</span></a></li>
 				</ul>
-				<ul class="nav navbar-nav navbar-right">
+				<ul class="nav navbar-nav navbar-right" style="margin-right: 15px;">
 				<li><a> Bienvenido/a ` + login + ` !</a></li>
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
@@ -116,7 +116,7 @@ func vistaPrincipal() string {
 	<div class="content-wrapper" style="min-height:unset;">
 		</br>
 		<div class="row" style="margin: 0 auto;">
-			<div class="col-md-3">
+			<div class="col-sm-3 col-md-3">
 				<div class="box">
 					<div class="box-header">
 						<h3 class="box-title">Gintónico</h3>
@@ -125,7 +125,7 @@ func vistaPrincipal() string {
 						<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
 						<input type="text" id="route" style="display: none" />
 						<input type="text" id="filename" style="display: none" />
-						<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block"/>
+						<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block btn-principal"/>
 						<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block"> Subir </button>
 						<button type="button"  style="display: none" id="buttonPedir" class="btn btn-primary btn-block">Pedir</button>
 						<input type="text" id="archivoPedido" style="display: none" />
@@ -134,7 +134,7 @@ func vistaPrincipal() string {
 					</div>
 				</div>
 			</div>
-			<div class="col-md-9" style="margin-bottom: 40px;">
+			<div class="col-sm-9 col-md-9" style="margin-bottom: 40px;">
 				<div class="box">
 					<div class="box-header">
 						<h3 class="box-title">Ficheros</h3>
@@ -144,6 +144,7 @@ func vistaPrincipal() string {
 							<thead>
 								<tr>
 									<th>Archivo</th>
+									<th style="width:130px">Tamaño</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -161,7 +162,7 @@ func vistaPrincipal() string {
 			<div class="pull-right hidden-xs">
 				<b>Version: </b>&nbsp;1.0.0
 			</div>
-			<strong>Copyright © 2018&nbsp;<a href="#"> Gintónico </a>.</strong>&nbsp;&nbsp;&nbsp;Todos los derechos reservados.
+			<strong>Copyright © 2018&nbsp;<a href="#" style="color:#FF654E"> Gintónico </a>.</strong>&nbsp;&nbsp;&nbsp;Todos los derechos reservados.
 		</div>
 	</footer>
 	`

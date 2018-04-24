@@ -59,6 +59,7 @@ type Blocks struct {
 type BlockPosition struct {
 	Block    string `json:"block"`
 	Position string `json:"position"`
+	Size     string `json:"size"`
 }
 
 // File Estructura de file
@@ -260,6 +261,7 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 	if existeBloque {
 		position.Block = nombreBloque
 		position.Position = parte
+		position.Size = strconv.Itoa(tam)
 		registrarBloqueFicheroUsuario(user, filename, position)
 		return true
 	}
@@ -288,6 +290,7 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	io.Copy(f, file)
 	position.Block = path
 	position.Position = r.FormValue("Parte")
+	position.Size = r.FormValue("Size")
 
 	//Se registra el bloque en la base de datos
 	var block Block
@@ -390,22 +393,39 @@ func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockP
 }
 
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
-	jsonBytes := leerJSON("./databases/files.json")
-	var files Files
-	json.Unmarshal(jsonBytes, &files)
-
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
 	username := result[len(result)-1]
+
+	type FilesJSON struct {
+		Filename []string `json:"filename"`
+		Size     []string `json:"size"`
+	}
+
+	jsonBytes := leerJSON("./databases/files.json")
+	var files Files
+	json.Unmarshal(jsonBytes, &files)
+
 	var filesUser []string
+	var tamFiles []string
 	for i := 0; i < len(files.Files); i++ {
 		if username == files.Files[i].User {
 			filesUser = append(filesUser, encodeURLB64(files.Files[i].File))
+			tamanyo := 0
+			for j := range files.Files[i].Order {
+				x, _ := strconv.Atoi(files.Files[i].Order[j].Size)
+				tamanyo += x
+			}
+			total := strconv.Itoa(tamanyo)
+			tamFiles = append(tamFiles, total)
 		}
 	}
+
+	var filesJSON = FilesJSON{Filename: filesUser, Size: tamFiles}
+
 	if len(filesUser) > 0 {
-		slc, _ := json.Marshal(filesUser)
+		slc, _ := json.Marshal(filesJSON)
 		w.Write(slc)
 	} else {
 		response(w, false, "No tienes ficheros subidos")
