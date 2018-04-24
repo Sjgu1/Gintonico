@@ -261,13 +261,14 @@ func peticionNombreFicheros() string {
 	if err == nil && len(filesJSON.Filename) != 0 && len(filesJSON.Size) != 0 && len(filesJSON.Filename) == len(filesJSON.Size) {
 		for i := range filesJSON.Filename {
 			//respuesta += filesJSON.Filename[i] + filesJSON.Size[i]
+			tamanyo, _ := strconv.Atoi(filesJSON.Size[i])
 			respuesta += `<tr>
 				<td>
 				<a href="#" onclick="seleccionarArchivo('` +
 				decodeURLB64(filesJSON.Filename[i]) + `')">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
 				</td>
 				<td>
-				<label>` + filesJSON.Size[i] + `</label>
+				<label>` + formatBytesToString(tamanyo) + `</label>
 				</td>
 			</tr>`
 		}

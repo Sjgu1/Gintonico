@@ -89,7 +89,6 @@ func createFile(path string) {
 		check(err)
 		defer file.Close()
 	}
-
 	//fmt.Println("==> done creating file", path)
 }
 
@@ -116,4 +115,18 @@ func createDirIfNotExist(dir string) {
 			panic(err)
 		}
 	}
+}
+
+func formatBytesToString(b int) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d Bytes", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	format := [...]string{"Kb", "Mb", "Gb", "Tb"}
+	return fmt.Sprintf("%.1f %s", float64(b)/float64(div), format[exp])
 }
