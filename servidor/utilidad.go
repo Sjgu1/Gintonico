@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -210,4 +211,10 @@ func leerJSON(jsonNamefile string) []byte {
 	// read our opened xmlFile as a byte array.
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	return byteValue
+}
+
+func guardarJSON(ruta string, any interface{}) {
+	varJSON, _ := json.Marshal(any)
+	err := ioutil.WriteFile(ruta, varJSON, 0666)
+	check(err)
 }

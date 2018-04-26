@@ -78,7 +78,7 @@ func createFile(path string) {
 
 func writeFile(path string, content string) {
 	// open file using READ & WRITE permission
-	var file, err = os.OpenFile(path, os.O_RDWR, 0644)
+	var file, err = os.OpenFile(path, os.O_RDWR, 0666)
 	check(err)
 	defer file.Close()
 

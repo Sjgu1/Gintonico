@@ -75,6 +75,13 @@ type Files struct {
 	Files []File `json:"files"`
 }
 
+const rutaArchivos = "./archivos/"
+const rutaCertificados = "./certificados"
+const rutaDatabases = "./databases"
+const rutaUsersBD = rutaDatabases + "/users.json"
+const rutaBlocksBD = rutaDatabases + "/blocks.json"
+const rutaFilesBD = rutaDatabases + "/files.json"
+
 // función para escribir una respuesta del servidor
 func response(w io.Writer, ok bool, msg string) {
 	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
@@ -107,23 +114,23 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	var user LoginJSON
 	err := json.Unmarshal(body, &user)
 	check(err)
-	if err == nil && validarLogin(user.Login[0], user.Password[0]) {
+
+	jsonBytes := leerJSON(rutaUsersBD)
+	var users Users
+	err = json.Unmarshal(jsonBytes, &users)
+	check(err)
+
+	if err == nil && validarLogin(user.Login[0], user.Password[0], &users) {
 		token := createJWT(user.Login[0])
 		w.Header().Add("Token", token)
-		guardarToken(token, user.Login[0])
-		//validarToken(token, r.Form.Get("login"))
+		guardarToken(token, user.Login[0], &users)
 		response(w, true, token)
 	} else {
 		response(w, false, "Error al loguear")
 	}
 }
 
-func validarLogin(login string, password string) bool {
-	jsonBytes := leerJSON("./databases/users.json")
-	var users Users
-	json.Unmarshal(jsonBytes, &users)
-
-	// Comprueba si algun usuario coincide con el del login
+func validarLogin(login string, password string, users *Users) bool {
 	for i := 0; i < len(users.Users); i++ {
 		if login == users.Users[i].User && encriptarScrypt(password, users.Users[i].Salt) == users.Users[i].Password {
 			return true
@@ -132,21 +139,15 @@ func validarLogin(login string, password string) bool {
 	return false
 }
 
-func guardarToken(token string, user string) {
-	jsonBytes := leerJSON("./databases/users.json")
-	var users Users
-	json.Unmarshal(jsonBytes, &users)
-
-	var contador = 0
-	for i := 0; i < len(users.Users); i++ {
+func guardarToken(token string, user string, users *Users) {
+	var encontrado = false
+	for i := 0; i < len(users.Users) && !encontrado; i++ {
 		if users.Users[i].User == user {
-			contador = i
+			users.Users[i].Token = token
+			guardarJSON(rutaUsersBD, &users)
+			encontrado = true
 		}
 	}
-	users.Users[contador].Token = token
-	usersJSON, _ := json.Marshal(users)
-	err := ioutil.WriteFile("./databases/users.json", usersJSON, 0644)
-	check(err)
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
@@ -174,17 +175,15 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func validarRegister(register string, password string, confirm string) bool {
-	//Las password no coinciden
 	if password != confirm || register == "" || password == "" {
 		return false
 	}
 
-	//El usuario ya existe en la base de datos
 	if comprobarExisteUsuario(register) {
 		return false
 	}
 
-	jsonBytes := leerJSON("./databases/users.json")
+	jsonBytes := leerJSON(rutaUsersBD)
 	var users Users
 	json.Unmarshal(jsonBytes, &users)
 
@@ -192,16 +191,13 @@ func validarRegister(register string, password string, confirm string) bool {
 	cifrado := randomString(32)
 
 	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado})
-
-	usersJSON, _ := json.Marshal(users)
-	err := ioutil.WriteFile("./databases/users.json", usersJSON, 0644)
-	check(err)
+	guardarJSON(rutaUsersBD, &users)
 
 	return true
 }
 
 func comprobarExisteUsuario(usuario string) bool {
-	jsonBytes := leerJSON("./databases/users.json")
+	jsonBytes := leerJSON(rutaUsersBD)
 	var users Users
 	json.Unmarshal(jsonBytes, &users)
 
@@ -248,9 +244,6 @@ func handlerHash(w http.ResponseWriter, r *http.Request) {
 }
 
 func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
-	//buscar el hash en la base de datos:
-	//si ya existe, hay que asociar ese hash existente con el usuario al que pertence y tal y se devuelve true
-	//si no existe, entonces simplemente se devuelve false
 	parte := strconv.Itoa(cont)
 
 	var position BlockPosition
@@ -260,64 +253,17 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 		position.Block = nombreBloque
 		position.Position = parte
 		position.Size = strconv.Itoa(tam)
-		registrarBloqueFicheroUsuario(user, filename, position)
+		registrarFileUsuario(user, filename, position)
 		return true
 	}
 	return false
 }
 
-func handlerUpload(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(32 << 20)
-	file, handler, err := r.FormFile("uploadfile")
-	check(err)
-	defer file.Close()
-	//fmt.Fprintf(w, "%v", handler.Header)
-
-	//Se crea un bloque con los datos recibidos
-	var position BlockPosition
-
-	last := getNombreUltimoFichero()
-	value, err := strconv.Atoi(last)
-	value++
-	path := strconv.Itoa(value)
-
-	f, err := os.OpenFile("./archivos/"+path, os.O_WRONLY|os.O_CREATE, 0666)
-	check(err)
-	defer f.Close()
-	io.Copy(f, file)
-	position.Block = path
-	position.Position = r.FormValue("Parte")
-	position.Size = r.FormValue("Size")
-
-	//Se registra el bloque en la base de datos
-	var block Block
-	block.User = r.FormValue("Username")
-	block.Hash = r.FormValue("Hash")
-	block.Block = path
-	registrarBloque(block)
-	//Se le asigna el bloque al par fichero-usuario
-	registrarBloqueFicheroUsuario(r.FormValue("Username"), decodeURLB64(handler.Filename), position)
-	cifrarFichero("./archivos/"+path, obtenerClaveCifrado("./archivos/"+path))
-}
-
-func registrarBloque(bloque Block) {
-	jsonBytes := leerJSON("./databases/blocks.json")
-	var blocks Blocks
-	json.Unmarshal(jsonBytes, &blocks)
-
-	blocks.Blocks = append(blocks.Blocks, Block{Block: bloque.Block, Hash: bloque.Hash, User: bloque.User})
-
-	blocksJSON, _ := json.Marshal(blocks)
-	err := ioutil.WriteFile("./databases/blocks.json", blocksJSON, 0644)
-	check(err)
-}
-
 func existeBloqueHash(hash string) (bool, string) {
-	jsonBytes := leerJSON("./databases/blocks.json")
+	jsonBytes := leerJSON(rutaBlocksBD)
 	var blocks Blocks
 	json.Unmarshal(jsonBytes, &blocks)
 
-	// Comprueba si algun usuario coincide con el del login
 	for i := 0; i < len(blocks.Blocks); i++ {
 		if hash == blocks.Blocks[i].Hash {
 			return true, blocks.Blocks[i].Block
@@ -326,67 +272,84 @@ func existeBloqueHash(hash string) (bool, string) {
 	return false, "nil"
 }
 
-func existeFicheroUsuario(usuario string, fichero string) bool {
-	jsonBytes := leerJSON("./databases/files.json")
-	var files Files
-	json.Unmarshal(jsonBytes, &files)
-	// Comprueba si algun usuario coincide con el del login
+func handlerUpload(w http.ResponseWriter, r *http.Request) {
+	r.ParseMultipartForm(32 << 20)
+	file, handler, err := r.FormFile("uploadfile")
+	check(err)
+	defer file.Close()
 
-	for i := 0; i < len(files.Files); i++ {
-		if usuario == files.Files[i].User && fichero == files.Files[i].File {
-			return true
-		}
-	}
-	return false
+	var position BlockPosition
+
+	last := getNombreUltimoFichero()
+	value, err := strconv.Atoi(last)
+	value++
+	path := strconv.Itoa(value)
+
+	f, err := os.OpenFile(rutaArchivos+path, os.O_WRONLY|os.O_CREATE, 0666)
+	check(err)
+	defer f.Close()
+	io.Copy(f, file)
+	position.Block = path
+	position.Position = r.FormValue("Parte")
+	position.Size = r.FormValue("Size")
+
+	var block Block
+	block.User = r.FormValue("Username")
+	block.Hash = r.FormValue("Hash")
+	block.Block = path
+	registrarBloque(&block)                                                                 //lo guarda en Blocks
+	registrarFileUsuario(r.FormValue("Username"), decodeURLB64(handler.Filename), position) //lo guarda en Files
+	cifrarFichero(rutaArchivos+path, obtenerClaveCifrado(rutaArchivos+path))
 }
 
-func registrarBloqueFicheroUsuario(usuario string, fichero string, bloque BlockPosition) {
-	jsonBytes := leerJSON("./databases/files.json")
+func registrarBloque(bloque *Block) {
+	jsonBytes := leerJSON(rutaBlocksBD)
+	var blocks Blocks
+	json.Unmarshal(jsonBytes, &blocks)
+
+	blocks.Blocks = append(blocks.Blocks, Block{Block: bloque.Block, Hash: bloque.Hash, User: bloque.User})
+	guardarJSON(rutaBlocksBD, &blocks)
+}
+
+func registrarFileUsuario(usuario string, fichero string, bloque BlockPosition) {
+	jsonBytes := leerJSON(rutaFilesBD)
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
 
-	existe := false
-
-	var order []BlockPosition
-	var count int
-	for i := 0; i < len(files.Files) && !existe; i++ {
-		if usuario == files.Files[i].User && fichero == files.Files[i].File {
-			existe = true
-			order = files.Files[i].Order
-			count = i
-		}
-	}
+	existe, bloquesDeArchivo, count := existeFicheroUsuario(usuario, fichero, &files)
 
 	if !existe { // Primer bloque de un nuevo archivo
-		order = append(order, bloque)
-		files.Files = append(files.Files, File{User: usuario, File: fichero, Order: order})
-
-		filesJSON, _ := json.Marshal(files)
-		err := ioutil.WriteFile("./databases/files.json", filesJSON, 0644)
-		// now Marshal it
-		check(err)
+		bloquesDeArchivo = append(bloquesDeArchivo, bloque)
+		files.Files = append(files.Files, File{User: usuario, File: fichero, Order: bloquesDeArchivo})
+		guardarJSON(rutaFilesBD, &files)
 	} else {
 		// Si ya existe un usuario-file, comprueba que el bloque-posicion existe, si no existe, lo crea, sino lo sobrescribe
 		asignado := false
-		var newOrder []BlockPosition
-		for i := 0; i < len(order) && !asignado; i++ {
-			if bloque.Position == order[i].Position {
-				order[i] = bloque
+		var nuevosBloquesDeArchivo []BlockPosition
+		for i := 0; i < len(bloquesDeArchivo); i++ {
+			if bloque.Position == bloquesDeArchivo[i].Position {
+				bloquesDeArchivo[i] = bloque
 				asignado = true
 			}
-			newOrder = append(newOrder, order[i])
+			nuevosBloquesDeArchivo = append(nuevosBloquesDeArchivo, bloquesDeArchivo[i])
 		}
 		if asignado {
-			order = newOrder
+			bloquesDeArchivo = nuevosBloquesDeArchivo
 		} else {
-			order = append(order, bloque)
+			bloquesDeArchivo = append(bloquesDeArchivo, bloque)
 		}
-		files.Files[count].Order = order
-		filesJSON, _ := json.Marshal(files)
-		err := ioutil.WriteFile("./databases/files.json", filesJSON, 0644)
-		// now Marshal it
-		check(err)
+		files.Files[count].Order = bloquesDeArchivo
+		guardarJSON(rutaFilesBD, &files)
 	}
+}
+
+func existeFicheroUsuario(usuario string, fichero string, files *Files) (bool, []BlockPosition, int) {
+	for i := 0; i < len(files.Files); i++ {
+		if usuario == files.Files[i].User && fichero == files.Files[i].File {
+			return true, files.Files[i].Order, i
+		}
+	}
+	return false, nil, 0
 }
 
 func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
@@ -400,7 +363,7 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 		Size     []string `json:"size"`
 	}
 
-	jsonBytes := leerJSON("./databases/files.json")
+	jsonBytes := leerJSON(rutaFilesBD)
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
 
@@ -436,7 +399,7 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 	userSolicitante := result[len(result)-3]
 	archivoSolicitado := decodeURLB64(result[len(result)-1])
 
-	jsonBytes := leerJSON("./databases/files.json")
+	jsonBytes := leerJSON(rutaFilesBD)
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
 
@@ -452,7 +415,7 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 	if !existe {
 		response(w, false, "El usuario no dispone de este archivo")
 	} else {
-		jsonBytes2 := leerJSON("./databases/blocks.json")
+		jsonBytes2 := leerJSON(rutaBlocksBD)
 		var blocks Blocks
 		json.Unmarshal(jsonBytes2, &blocks)
 
@@ -461,35 +424,30 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 			for j := 0; j < len(files.Files); j++ {
 				for k := 0; k < len(files.Files[j].Order) && !bloqueCambiado; k++ {
 					if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block {
-						otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block)
+						otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block, &files)
 						if !otroUsuarioTiene {
-							deleteFile("./archivos/" + bloquesDeArchivo[i].Block)
+							deleteFile(rutaArchivos + bloquesDeArchivo[i].Block)
 							eliminarBloque(bloquesDeArchivo[i].Block, &blocks)
 						} else {
 							claveOriginal, nuevaClave, err := obtenerClavesUsuarios(bloquesDeArchivo[i].Block, otroUsuarioBloque)
 							check(err)
 
-							asignarNuevaClave("./archivos/"+bloquesDeArchivo[i].Block, claveOriginal, nuevaClave)
+							asignarNuevaClave(rutaArchivos+bloquesDeArchivo[i].Block, claveOriginal, nuevaClave)
 
-							blocks.Blocks[getPosicionBloque(bloquesDeArchivo[i].Block)].User = otroUsuarioBloque
+							blocks.Blocks[getPosicionBloque(bloquesDeArchivo[i].Block, &blocks)].User = otroUsuarioBloque
 						}
 						bloqueCambiado = true
-					} /*else { //no hace falta responder que no existe el bloque
-						response(w, false, "No existe el bloque")
-					}*/
+					}
 				}
 			}
 		}
-		blocksJSON, _ := json.Marshal(blocks)
-		err := ioutil.WriteFile("./databases/blocks.json", blocksJSON, 0644)
-		check(err)
-		eliminarArchivoUsuario(userSolicitante, archivoSolicitado)
+		guardarJSON(rutaBlocksBD, &blocks)
+		eliminarArchivoUsuario(userSolicitante, archivoSolicitado, &files)
 		response(w, true, "Borrado")
 	}
 }
 
 func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
-
 	file, err := ioutil.ReadFile(path)
 	check(err)
 
@@ -506,13 +464,9 @@ func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
 
 		io.Copy(f, bytes.NewReader(encryptedFile))
 	}
-
 }
 
-func getPosicionBloque(bloque string) int {
-	jsonBytes2 := leerJSON("./databases/blocks.json")
-	var blocks Blocks
-	json.Unmarshal(jsonBytes2, &blocks)
+func getPosicionBloque(bloque string, blocks *Blocks) int {
 	for i := 0; i < len(blocks.Blocks); i++ {
 		if blocks.Blocks[i].Block == bloque {
 			return i
@@ -521,67 +475,54 @@ func getPosicionBloque(bloque string) int {
 	return 0
 }
 
-func eliminarArchivoUsuario(usuario string, archivo string) {
-	jsonBytes := leerJSON("./databases/files.json")
-	var files Files
-	json.Unmarshal(jsonBytes, &files)
-
-	existe := false
-	for i := 0; i < len(files.Files) && !existe; i++ {
+func eliminarArchivoUsuario(usuario string, archivo string, files *Files) bool {
+	borrado := false
+	for i := 0; i < len(files.Files) && !borrado; i++ {
 		if files.Files[i].File == archivo && files.Files[i].User == usuario {
 			files.Files = append(files.Files[:i], files.Files[i+1:]...)
-			filesJSON, _ := json.Marshal(files)
-			err := ioutil.WriteFile("./databases/files.json", filesJSON, 0644)
-			check(err)
-			existe = true
+			guardarJSON(rutaFilesBD, &files)
+			borrado = true
 		}
 	}
+	return borrado
 }
 
-func eliminarBloque(bloque string, blocks *Blocks) {
-	existe := false
-	for i := 0; i < len(blocks.Blocks) && !existe; i++ {
+func eliminarBloque(bloque string, blocks *Blocks) bool {
+	borrado := false
+	for i := 0; i < len(blocks.Blocks) && !borrado; i++ {
 		if blocks.Blocks[i].Block == bloque {
 			blocks.Blocks = append(blocks.Blocks[:i], blocks.Blocks[i+1:]...)
-			existe = true
+			borrado = true
 		}
 	}
+	return borrado
 }
 
 func obtenerClavesUsuarios(bloque string, nuevoUsuario string) (string, string, error) {
-	claveUsuarioOriginal := obtenerClaveCifrado("./archivos/" + bloque)
-	jsonBytes := leerJSON("./databases/users.json")
+	claveUsuarioOriginal := obtenerClaveCifrado(rutaArchivos + bloque)
+	jsonBytes := leerJSON(rutaUsersBD)
 	var users Users
 	json.Unmarshal(jsonBytes, &users)
-	var claveNuevoUsuario string
-	var encontrado = false
-	for i := 0; i < len(users.Users) && !encontrado; i++ {
+
+	for i := 0; i < len(users.Users); i++ {
 		if nuevoUsuario == users.Users[i].User {
-			claveNuevoUsuario = users.Users[i].Cifrado
-			encontrado = true
+			claveNuevoUsuario := users.Users[i].Cifrado
+			return claveUsuarioOriginal, claveNuevoUsuario, nil
 		}
 	}
 
-	if encontrado {
-		return claveUsuarioOriginal, claveNuevoUsuario, nil
-	}
 	err := errors.New("Error al obtener las claves")
 	return "", "", err
-
 }
 
-//comprueba si alquien a parte de ti tiene el bloque
-func checkUsersBlocks(username string, block string) (string, bool) {
-	jsonBytes := leerJSON("./databases/files.json")
-	var files Files
-	json.Unmarshal(jsonBytes, &files)
+func checkUsersBlocks(username string, block string, files *Files) (string, bool) {
+	//comprueba si alquien a parte de ti tiene el bloque
 	for i := 0; i < len(files.Files); i++ {
 		for j := 0; j < len(files.Files[i].Order); j++ {
 			if files.Files[i].Order[j].Block == block && files.Files[i].User != username {
 				return files.Files[i].User, true
 			}
 		}
-
 	}
 	return "false", false
 }
@@ -594,18 +535,11 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 	userSolicitante := result[len(result)-3]
 	archivoSolicitado := decodeURLB64(result[len(result)-1])
 
-	jsonBytes := leerJSON("./databases/files.json")
+	jsonBytes := leerJSON(rutaFilesBD)
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
 
-	existe := false
-	var bloquesDeArchivo []BlockPosition
-	for i := 0; i < len(files.Files); i++ {
-		if files.Files[i].User == userSolicitante && files.Files[i].File == archivoSolicitado && !existe {
-			existe = true
-			bloquesDeArchivo = files.Files[i].Order
-		}
-	}
+	existe, bloquesDeArchivo, _ := existeFicheroUsuario(userSolicitante, archivoSolicitado, &files)
 
 	if !existe {
 		response(w, false, "El archivo No Existe")
@@ -613,7 +547,7 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 		formatoArchivo := strings.Split(archivoSolicitado, ".")
 		var streamBytesTotal []byte
 		for i := 0; i < len(bloquesDeArchivo); i++ {
-			ruta := "./archivos/" + bloquesDeArchivo[i].Block
+			ruta := rutaArchivos + bloquesDeArchivo[i].Block
 			streamBytes, err := ioutil.ReadFile(ruta)
 			streamBytes = decryptAESCFB(streamBytes, obtenerClaveCifrado(ruta))
 			check(err)
@@ -622,18 +556,16 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 		kind := mime.TypeByExtension("." + formatoArchivo[len(formatoArchivo)-1])
 
 		b := bytes.NewBuffer(streamBytesTotal)
-		// stream straight to client(browser)
-
 		w.Header().Set("Content-type", kind)
 
-		if _, err := b.WriteTo(w); err != nil { // <----- here!
+		if _, err := b.WriteTo(w); err != nil {
 			fmt.Fprintf(w, "%s", err)
 		}
 	}
 }
 
 func getNombreUltimoFichero() string {
-	jsonBytes := leerJSON("./databases/blocks.json")
+	jsonBytes := leerJSON(rutaBlocksBD)
 	var blocks Blocks
 	json.Unmarshal(jsonBytes, &blocks)
 
@@ -692,7 +624,6 @@ func visitDecrypt(path string, f os.FileInfo, err error) error {
 }
 
 func descifrarFichero(path string, clave string) {
-
 	file, err := ioutil.ReadFile(path)
 	check(err)
 
@@ -712,7 +643,7 @@ func obtenerClaveCifrado(path string) string {
 	nombreBloque := strings.Split(path, "/")
 	bloque := nombreBloque[len(nombreBloque)-1]
 	/* Obtener quien cifro el bloque*/
-	jsonBytes := leerJSON("./databases/blocks.json")
+	jsonBytes := leerJSON(rutaBlocksBD)
 	var blocks Blocks
 	json.Unmarshal(jsonBytes, &blocks)
 
@@ -724,10 +655,10 @@ func obtenerClaveCifrado(path string) string {
 			encontrado = true
 		}
 	}
-
 	/* FIN Obtener quien cifro el bloque*/
+
 	/* Obtener clave de cifrado el bloque*/
-	jsonBytes = leerJSON("./databases/users.json")
+	jsonBytes = leerJSON(rutaUsersBD)
 	var users Users
 	json.Unmarshal(jsonBytes, &users)
 
@@ -756,16 +687,16 @@ func middlewareAuth(next http.Handler) http.Handler {
 
 func main() {
 	rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
-	createDirIfNotExist("./archivos/")
-	createDirIfNotExist("./certificados/")
-	createDirIfNotExist("./databases/")
+	createDirIfNotExist(rutaArchivos)
+	createDirIfNotExist(rutaCertificados)
+	createDirIfNotExist(rutaDatabases)
 	stopChan := make(chan os.Signal)
 	signal.Notify(stopChan, os.Interrupt)
 
 	// Comprueba los certificados, si no existen se generan nuevos
-	err := httpscerts.Check("./certificados/cert.pem", "./certificados/key.pem")
+	err := httpscerts.Check(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem")
 	if err != nil {
-		err = httpscerts.Generate("./certificados/cert.pem", "./certificados/key.pem", ":8081")
+		err = httpscerts.Generate(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem", ":8081")
 		if err != nil {
 			log.Fatal("Error: No se han podido crear los certificados https.")
 		}
@@ -785,7 +716,7 @@ func main() {
 
 	go func() {
 		log.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
-		if err := srv.ListenAndServeTLS("./certificados/cert.pem", "./certificados/key.pem"); err != nil {
+		if err := srv.ListenAndServeTLS(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem"); err != nil {
 			log.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
 		}
 	}()
@@ -797,7 +728,7 @@ func main() {
 	}()
 
 	log.Println("Descifrando bases de datos...")
-	descifrarCarpeta("./databases")
+	descifrarCarpeta(rutaDatabases)
 
 	<-stopChan // espera señal SIGINT
 	log.Println("Apagando servidor ...")
@@ -807,7 +738,7 @@ func main() {
 	srv.Shutdown(ctx)
 
 	log.Println("Cifrando bases de datos...")
-	cifrarCarpeta("./databases")
+	cifrarCarpeta(rutaDatabases)
 
 	log.Println("Servidor detenido correctamente")
 }
