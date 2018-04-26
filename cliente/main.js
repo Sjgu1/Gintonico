@@ -36,8 +36,13 @@ function setPage(html) {
                     "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
                     "sSortDescending": ": Activar para ordenar la columna de manera descendente"
                 }
-            }
-        });
+            },
+            "columnDefs": [{
+                "type": 'file-size',
+                "targets": "sizeColumn"
+            }],
+            "order": [[ 0, "asc" ]]
+        })
     } catch (err) {
 
     }

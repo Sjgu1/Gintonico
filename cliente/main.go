@@ -50,6 +50,7 @@ func main() {
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
 		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
+		body.Find("buttonEliminar").OnEvent(gowd.OnClick, eliminarFichero)
 		break
 	}
 	//start the ui loop
@@ -231,7 +232,7 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 		createDirIfNotExist("./descargas/")
 		createFile("./descargas/" + body.Find("archivoPedido").GetValue())
 		writeFile("./descargas/"+body.Find("archivoPedido").GetValue(), respuesta)
-		body.Find("texto").SetText(body.Find("archivoPedido").GetValue())
+		body.Find("texto").SetText("Fichero en descargas: " + body.Find("archivoPedido").GetValue())
 	}
 }
 
@@ -261,18 +262,53 @@ func peticionNombreFicheros() string {
 	if err == nil && len(filesJSON.Filename) != 0 && len(filesJSON.Size) != 0 && len(filesJSON.Filename) == len(filesJSON.Size) {
 		for i := range filesJSON.Filename {
 			//respuesta += filesJSON.Filename[i] + filesJSON.Size[i]
+			/*<div class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
+				<ul class="dropdown-menu dropdown-menu-files" style="background-color: #53A3CD;">
+					<li><a href="#" onclick="seleccionarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">Descargar</a></li>
+					<li><a href="#" onclick="eliminarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">Eliminar</a></li>
+				</ul>
+			</div>*/
 			tamanyo, _ := strconv.Atoi(filesJSON.Size[i])
 			respuesta += `<tr>
 				<td>
-				<a href="#" onclick="seleccionarArchivo('` +
-				decodeURLB64(filesJSON.Filename[i]) + `')">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
+					<a href="#">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
+					<span style="float:right;">&nbsp;</span>
+					<span style="float:right;">&nbsp;</span>
+					<button type="button" class="btn btn-danger btn-xs" style="float: right;" onclick="eliminarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">
+						<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+					</button>
+					<span style="float:right;">&nbsp;</span>
+					<span style="float:right;">&nbsp;</span>
+					<button type="button" class="btn btn-primary btn-xs" style="float: right;" onclick="seleccionarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">
+						<span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+					</button>
+					<span style="float:right;">&nbsp;</span>
+					<span style="float:right;">&nbsp;</span>
 				</td>
 				<td>
-				<label>` + formatBytesToString(tamanyo) + `</label>
+					` + formatBytesToString(tamanyo) + `
 				</td>
 			</tr>`
 		}
 
 	}
 	return respuesta
+}
+
+func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
+	filename := encodeURLB64(body.Find("archivoEliminar").GetValue())
+	body.Find("texto").SetText("Eliminando: " + decodeURLB64(filename))
+	/*response := sendServerPetition("DELETE", nil, "/user/"+login+"/file/"+filename, "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		goLogin(nil, nil)
+		body.Find("texto").SetText(respuestaJSON.Msg)
+	}*/
 }

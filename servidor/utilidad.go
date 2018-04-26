@@ -94,7 +94,7 @@ func decodeURLB64(cadena string) string {
 	return string(decode[:])
 }
 
-const randomStringLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const randomStringLetters = "0123abcdefghijklmnopqrstuvwxyz456ABCDEFGHIJKLMNOPQRSTUVWXYZ789"
 
 func randomString(n int) string {
 	b := make([]byte, n)

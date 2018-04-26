@@ -96,13 +96,13 @@ func vistaPrincipal() string {
 			</div>
 			<div class="collapse navbar-collapse" id="navbar-collapse">
 				<ul class="nav navbar-nav">
-				<li class="active"><a href="#">Principal <span class="sr-only">(current)</span></a></li>
+				<li class="active"><a href="#">Almacenamiento <span class="sr-only">(current)</span></a></li>
 				</ul>
 				<ul class="nav navbar-nav navbar-right" style="margin-right: 15px;">
-				<li><a> Bienvenido/a ` + login + ` !</a></li>
+				<li><a style="color: #fff;user-select: none;" id="binvenido"> Bienvenido/a ` + login + ` !</a></li>
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
-					<ul class="dropdown-menu">
+					<ul class="dropdown-menu dropdown-menu-settings" style="background-color: #FF654E">
 					<li><a href="#">Accion increíble</a></li>
 					<li><a href="#">Esta es mejor</a></li>
 					<li role="separator" class="divider"></li>
@@ -115,6 +115,7 @@ func vistaPrincipal() string {
 	</nav></header>
 	<div class="content-wrapper" style="min-height:unset;">
 		</br>
+		<p style="margin-left: 15px;" id="texto"/><p style="margin-left: 15px;" id="texto1"/><p style="margin-left: 15px;" id="texto2"/>
 		<div class="row" style="margin: 0 auto;">
 			<div class="col-sm-3 col-md-3">
 				<div class="box">
@@ -125,7 +126,7 @@ func vistaPrincipal() string {
 						<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
 						<input type="text" id="route" style="display: none" />
 						<input type="text" id="filename" style="display: none" />
-						<input type="button" onclick="document.getElementById('idFile').click();"  value="Seleccionar Archivo" id="file-selector" class="btn btn-primary btn-block btn-principal"/>
+						<input type="button" onclick="document.getElementById('idFile').click();"  value="Subir Archivo" id="file-selector" class="btn btn-primary btn-block btn-principal"/>
 						<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block"> Subir </button>
 						<button type="button"  style="display: none" id="buttonPedir" class="btn btn-primary btn-block">Pedir</button>
 						<input type="text" id="archivoPedido" style="display: none" />
@@ -144,17 +145,18 @@ func vistaPrincipal() string {
 							<thead>
 								<tr>
 									<th>Archivo</th>
-									<th style="width:130px">Tamaño</th>
+									<th class="sizeColumn" style="width:130px">Tamaño</th>
 								</tr>
 							</thead>
 							<tbody>
+								<button type="button" id="buttonEliminar" style="display: none" class="btn btn-primary btn-block">Pedir</button>
+								<input type="text" id="archivoEliminar" style="display: none" />
 								` + peticionNombreFicheros() + `
 							</tbody>
 						</table>
 					</div>
 				</div>
 			</div>
-			<p id="texto"/><p id="texto1"/><p id="texto2"/>
 		</div>
 	</div>
 	<footer class="main-footer" style="bottom:0;position:fixed;width:100%">

@@ -32,8 +32,6 @@ func sendServerPetition(method string, datos io.Reader, route string, contentTyp
 	req.Header.Add("Authorization", token)
 	r, err := client.Do(req)
 
-	//r, err := client.PostForm("https://localhost:8081"+route, data) // enviamos por POST
-	//r.Header.Add()
 	check(err)
 	return r
 }
@@ -48,24 +46,11 @@ func encriptarScrypt(cadena string, salt string) string {
 }
 
 func encodeURLB64(cadena string) string {
-	//StdEncoding
 	return base64.URLEncoding.EncodeToString([]byte(cadena))
 }
 
 func decodeURLB64(cadena string) string {
-	//StdEncoding
 	decode, _ := base64.URLEncoding.DecodeString(cadena)
-	return string(decode[:])
-}
-
-func encodeB64(cadena string) string {
-	//StdEncoding
-	return base64.StdEncoding.EncodeToString([]byte(cadena))
-}
-
-func decodeB64(cadena string) string {
-	//StdEncoding
-	decode, _ := base64.StdEncoding.DecodeString(cadena)
 	return string(decode[:])
 }
 
@@ -89,7 +74,6 @@ func createFile(path string) {
 		check(err)
 		defer file.Close()
 	}
-	//fmt.Println("==> done creating file", path)
 }
 
 func writeFile(path string, content string) {
@@ -101,11 +85,8 @@ func writeFile(path string, content string) {
 	// write some text line-by-line to file
 	_, err = file.WriteString(content)
 
-	// save changes
 	err = file.Sync()
 	check(err)
-
-	//fmt.Println("==> done writing to file")
 }
 
 func createDirIfNotExist(dir string) {
@@ -120,13 +101,13 @@ func createDirIfNotExist(dir string) {
 func formatBytesToString(b int) string {
 	const unit = 1024
 	if b < unit {
-		return fmt.Sprintf("%d Bytes", b)
+		return fmt.Sprintf("%d B", b)
 	}
 	div, exp := int64(unit), 0
 	for n := b / unit; n >= unit; n /= unit {
 		div *= unit
 		exp++
 	}
-	format := [...]string{"Kb", "Mb", "Gb", "Tb"}
+	format := [...]string{"KB", "MB", "GB", "TB"}
 	return fmt.Sprintf("%.1f %s", float64(b)/float64(div), format[exp])
 }
