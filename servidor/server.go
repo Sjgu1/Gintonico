@@ -428,8 +428,8 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 		response(w, false, "No tienes ficheros subidos")
 	}
 }
-func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 
+func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
@@ -442,8 +442,8 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 
 	existe := false
 	var bloquesDeArchivo []BlockPosition
-	for i := 0; i < len(files.Files); i++ {
-		if files.Files[i].User == userSolicitante && files.Files[i].File == archivoSolicitado && !existe {
+	for i := 0; i < len(files.Files) && !existe; i++ {
+		if files.Files[i].User == userSolicitante && files.Files[i].File == archivoSolicitado {
 			existe = true
 			bloquesDeArchivo = files.Files[i].Order
 		}
@@ -452,19 +452,19 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 	if !existe {
 		response(w, false, "El usuario no dispone de este archivo")
 	} else {
-
 		jsonBytes2 := leerJSON("./databases/blocks.json")
 		var blocks Blocks
 		json.Unmarshal(jsonBytes2, &blocks)
 
 		for i := 0; i < len(bloquesDeArchivo); i++ {
-			var hecho = false
+			var bloqueCambiado = false
 			for j := 0; j < len(files.Files); j++ {
-				for k := 0; k < len(files.Files[j].Order); k++ {
-					if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block && !hecho {
+				for k := 0; k < len(files.Files[j].Order) && !bloqueCambiado; k++ {
+					if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block {
 						otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block)
 						if !otroUsuarioTiene {
-							//deleteFile("./archivos/" + bloquesDeArchivo[i].Block)
+							deleteFile("./archivos/" + bloquesDeArchivo[i].Block)
+							eliminarBloque(bloquesDeArchivo[i].Block, &blocks)
 						} else {
 							claveOriginal, nuevaClave, err := obtenerClavesUsuarios(bloquesDeArchivo[i].Block, otroUsuarioBloque)
 							check(err)
@@ -472,11 +472,11 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 							asignarNuevaClave("./archivos/"+bloquesDeArchivo[i].Block, claveOriginal, nuevaClave)
 
 							blocks.Blocks[getPosicionBloque(bloquesDeArchivo[i].Block)].User = otroUsuarioBloque
-							hecho = true
 						}
-					} else {
+						bloqueCambiado = true
+					} /*else { //no hace falta responder que no existe el bloque
 						response(w, false, "No existe el bloque")
-					}
+					}*/
 				}
 			}
 		}
@@ -486,7 +486,6 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 		eliminarArchivoUsuario(userSolicitante, archivoSolicitado)
 		response(w, true, "Borrado")
 	}
-
 }
 
 func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
@@ -509,6 +508,7 @@ func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
 	}
 
 }
+
 func getPosicionBloque(bloque string) int {
 	jsonBytes2 := leerJSON("./databases/blocks.json")
 	var blocks Blocks
@@ -520,27 +520,34 @@ func getPosicionBloque(bloque string) int {
 	}
 	return 0
 }
+
 func eliminarArchivoUsuario(usuario string, archivo string) {
 	jsonBytes := leerJSON("./databases/files.json")
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
 
-	var indice int
 	existe := false
-	for i := 0; i < len(files.Files); i++ {
+	for i := 0; i < len(files.Files) && !existe; i++ {
 		if files.Files[i].File == archivo && files.Files[i].User == usuario {
-			indice = i
+			files.Files = append(files.Files[:i], files.Files[i+1:]...)
+			filesJSON, _ := json.Marshal(files)
+			err := ioutil.WriteFile("./databases/files.json", filesJSON, 0644)
+			check(err)
 			existe = true
 		}
 	}
-	if existe {
-		files.Files = append(files.Files[:indice], files.Files[indice+1:]...)
-		filesJSON, _ := json.Marshal(files)
-		err := ioutil.WriteFile("./databases/files.json", filesJSON, 0644)
-		check(err)
+}
 
+func eliminarBloque(bloque string, blocks *Blocks) {
+	existe := false
+	for i := 0; i < len(blocks.Blocks) && !existe; i++ {
+		if blocks.Blocks[i].Block == bloque {
+			blocks.Blocks = append(blocks.Blocks[:i], blocks.Blocks[i+1:]...)
+			existe = true
+		}
 	}
 }
+
 func obtenerClavesUsuarios(bloque string, nuevoUsuario string) (string, string, error) {
 	claveUsuarioOriginal := obtenerClaveCifrado("./archivos/" + bloque)
 	jsonBytes := leerJSON("./databases/users.json")
@@ -578,6 +585,7 @@ func checkUsersBlocks(username string, block string) (string, bool) {
 	}
 	return "false", false
 }
+
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(r.URL.String())
 	check(err)
