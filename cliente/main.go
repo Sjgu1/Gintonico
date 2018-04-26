@@ -299,7 +299,7 @@ func peticionNombreFicheros() string {
 func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	filename := encodeURLB64(body.Find("archivoEliminar").GetValue())
 	body.Find("texto").SetText("Eliminando: " + decodeURLB64(filename))
-	/*response := sendServerPetition("DELETE", nil, "/user/"+login+"/file/"+filename, "application/json")
+	response := sendServerPetition("DELETE", nil, "/user/"+login+"/file/"+filename, "application/json")
 	defer response.Body.Close()
 
 	buf := new(bytes.Buffer)
@@ -310,5 +310,7 @@ func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 		//Cerrar sesion
 		goLogin(nil, nil)
 		body.Find("texto").SetText(respuestaJSON.Msg)
-	}*/
+	} else {
+		goPrincipal(nil, nil)
+	}
 }

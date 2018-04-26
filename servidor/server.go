@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -92,7 +93,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("Paso por handlerLogin")
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
@@ -215,7 +215,6 @@ func comprobarExisteUsuario(usuario string) bool {
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("entro handlerHash")
 	r.ParseForm()                                // es necesario parsear el formulario
 	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
 
@@ -242,7 +241,6 @@ func handlerHash(w http.ResponseWriter, r *http.Request) {
 		filename := decodeURLB64(bodyJSON.Filename[0]) // nombre del fichero original
 
 		comprobar := comprobarHash(contador, hash, size, user, filename)
-		//fmt.Println("Hash recibido: " + hash + " usuario: " + user + " filename: " + filename)
 		response(w, comprobar, "Hash comprobado")
 	} else {
 		response(w, false, "Error al comprobar")
@@ -269,7 +267,6 @@ func comprobarHash(cont int, hash string, tam int, user string, filename string)
 }
 
 func handlerUpload(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("Paso por handlerUpload")
 	r.ParseMultipartForm(32 << 20)
 	file, handler, err := r.FormFile("uploadfile")
 	check(err)
@@ -431,13 +428,161 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 		response(w, false, "No tienes ficheros subidos")
 	}
 }
+func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 
-func handlerSendFile(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println("Paso por handlerFiles")
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
-	//fmt.Println(result)
+	userSolicitante := result[len(result)-3]
+	archivoSolicitado := decodeURLB64(result[len(result)-1])
+
+	jsonBytes := leerJSON("./databases/files.json")
+	var files Files
+	json.Unmarshal(jsonBytes, &files)
+
+	existe := false
+	var bloquesDeArchivo []BlockPosition
+	for i := 0; i < len(files.Files); i++ {
+		if files.Files[i].User == userSolicitante && files.Files[i].File == archivoSolicitado && !existe {
+			existe = true
+			bloquesDeArchivo = files.Files[i].Order
+		}
+	}
+
+	if !existe {
+		response(w, false, "El usuario no dispone de este archivo")
+	} else {
+
+		jsonBytes2 := leerJSON("./databases/blocks.json")
+		var blocks Blocks
+		json.Unmarshal(jsonBytes2, &blocks)
+
+		for i := 0; i < len(bloquesDeArchivo); i++ {
+			var hecho = false
+			for j := 0; j < len(files.Files); j++ {
+				for k := 0; k < len(files.Files[j].Order); k++ {
+					if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block && !hecho {
+						otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block)
+						if !otroUsuarioTiene {
+							//deleteFile("./archivos/" + bloquesDeArchivo[i].Block)
+						} else {
+							claveOriginal, nuevaClave, err := obtenerClavesUsuarios(bloquesDeArchivo[i].Block, otroUsuarioBloque)
+							check(err)
+
+							asignarNuevaClave("./archivos/"+bloquesDeArchivo[i].Block, claveOriginal, nuevaClave)
+
+							blocks.Blocks[getPosicionBloque(bloquesDeArchivo[i].Block)].User = otroUsuarioBloque
+							hecho = true
+						}
+					} else {
+						response(w, false, "No existe el bloque")
+					}
+				}
+			}
+		}
+		blocksJSON, _ := json.Marshal(blocks)
+		err := ioutil.WriteFile("./databases/blocks.json", blocksJSON, 0644)
+		check(err)
+		eliminarArchivoUsuario(userSolicitante, archivoSolicitado)
+		response(w, true, "Borrado")
+	}
+
+}
+
+func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
+
+	file, err := ioutil.ReadFile(path)
+	check(err)
+
+	if len(file) > 0 {
+		decryptedFile := decryptAESCFB(file, claveOriginal)
+
+		deleteFile(path)
+
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
+		check(err)
+		defer f.Close()
+
+		encryptedFile := encryptAESCFB(decryptedFile, claveNueva)
+
+		io.Copy(f, bytes.NewReader(encryptedFile))
+	}
+
+}
+func getPosicionBloque(bloque string) int {
+	jsonBytes2 := leerJSON("./databases/blocks.json")
+	var blocks Blocks
+	json.Unmarshal(jsonBytes2, &blocks)
+	for i := 0; i < len(blocks.Blocks); i++ {
+		if blocks.Blocks[i].Block == bloque {
+			return i
+		}
+	}
+	return 0
+}
+func eliminarArchivoUsuario(usuario string, archivo string) {
+	jsonBytes := leerJSON("./databases/files.json")
+	var files Files
+	json.Unmarshal(jsonBytes, &files)
+
+	var indice int
+	existe := false
+	for i := 0; i < len(files.Files); i++ {
+		if files.Files[i].File == archivo && files.Files[i].User == usuario {
+			indice = i
+			existe = true
+		}
+	}
+	if existe {
+		files.Files = append(files.Files[:indice], files.Files[indice+1:]...)
+		filesJSON, _ := json.Marshal(files)
+		err := ioutil.WriteFile("./databases/files.json", filesJSON, 0644)
+		check(err)
+
+	}
+}
+func obtenerClavesUsuarios(bloque string, nuevoUsuario string) (string, string, error) {
+	claveUsuarioOriginal := obtenerClaveCifrado("./archivos/" + bloque)
+	jsonBytes := leerJSON("./databases/users.json")
+	var users Users
+	json.Unmarshal(jsonBytes, &users)
+	var claveNuevoUsuario string
+	var encontrado = false
+	for i := 0; i < len(users.Users) && !encontrado; i++ {
+		if nuevoUsuario == users.Users[i].User {
+			claveNuevoUsuario = users.Users[i].Cifrado
+			encontrado = true
+		}
+	}
+
+	if encontrado {
+		return claveUsuarioOriginal, claveNuevoUsuario, nil
+	}
+	err := errors.New("Error al obtener las claves")
+	return "", "", err
+
+}
+
+//comprueba si alquien a parte de ti tiene el bloque
+func checkUsersBlocks(username string, block string) (string, bool) {
+	jsonBytes := leerJSON("./databases/files.json")
+	var files Files
+	json.Unmarshal(jsonBytes, &files)
+	for i := 0; i < len(files.Files); i++ {
+		for j := 0; j < len(files.Files[i].Order); j++ {
+			if files.Files[i].Order[j].Block == block && files.Files[i].User != username {
+				return files.Files[i].User, true
+			}
+		}
+
+	}
+	return "false", false
+}
+func handlerSendFile(w http.ResponseWriter, r *http.Request) {
+	u, err := url.Parse(r.URL.String())
+	check(err)
+	result := strings.Split(u.Path, "/")
+
 	userSolicitante := result[len(result)-3]
 	archivoSolicitado := decodeURLB64(result[len(result)-1])
 
@@ -539,6 +684,7 @@ func visitDecrypt(path string, f os.FileInfo, err error) error {
 }
 
 func descifrarFichero(path string, clave string) {
+
 	file, err := ioutil.ReadFile(path)
 	check(err)
 
@@ -555,7 +701,6 @@ func descifrarFichero(path string, clave string) {
 }
 
 func obtenerClaveCifrado(path string) string {
-	//fmt.Println("Path: " + path)
 	nombreBloque := strings.Split(path, "/")
 	bloque := nombreBloque[len(nombreBloque)-1]
 	/* Obtener quien cifro el bloque*/
@@ -625,7 +770,8 @@ func main() {
 	muxa.Handle("/checkhash", middlewareAuth(http.HandlerFunc(handlerHash)))
 	muxa.Handle("/upload", middlewareAuth(http.HandlerFunc(handlerUpload)))
 	muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
-	muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile)))
+	muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile))).Methods("GET")
+	muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerDeleteFile))).Methods("DELETE")
 
 	srv := &http.Server{Addr: ":8081", Handler: muxa}
 
