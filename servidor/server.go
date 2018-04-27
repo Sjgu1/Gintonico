@@ -75,6 +75,7 @@ type Files struct {
 	Files []File `json:"files"`
 }
 
+const rutaMasterKey = "master.key"
 const rutaArchivos = "./archivos/"
 const rutaCertificados = "./certificados"
 const rutaDatabases = "./databases"
@@ -415,9 +416,9 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 	if !existe {
 		response(w, false, "El usuario no dispone de este archivo")
 	} else {
-		jsonBytes2 := leerJSON(rutaBlocksBD)
+		jsonBytes = leerJSON(rutaBlocksBD)
 		var blocks Blocks
-		json.Unmarshal(jsonBytes2, &blocks)
+		json.Unmarshal(jsonBytes, &blocks)
 
 		for i := 0; i < len(bloquesDeArchivo); i++ {
 			var bloqueCambiado = false
@@ -453,7 +454,6 @@ func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
 
 	if len(file) > 0 {
 		decryptedFile := decryptAESCFB(file, claveOriginal)
-
 		deleteFile(path)
 
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
@@ -461,7 +461,6 @@ func asignarNuevaClave(path string, claveOriginal string, claveNueva string) {
 		defer f.Close()
 
 		encryptedFile := encryptAESCFB(decryptedFile, claveNueva)
-
 		io.Copy(f, bytes.NewReader(encryptedFile))
 	}
 }
@@ -545,17 +544,17 @@ func handlerSendFile(w http.ResponseWriter, r *http.Request) {
 		response(w, false, "El archivo No Existe")
 	} else {
 		formatoArchivo := strings.Split(archivoSolicitado, ".")
-		var streamBytesTotal []byte
+		var bytesTotal []byte
 		for i := 0; i < len(bloquesDeArchivo); i++ {
 			ruta := rutaArchivos + bloquesDeArchivo[i].Block
-			streamBytes, err := ioutil.ReadFile(ruta)
-			streamBytes = decryptAESCFB(streamBytes, obtenerClaveCifrado(ruta))
+			leerBytes, err := ioutil.ReadFile(ruta)
 			check(err)
-			streamBytesTotal = append(streamBytesTotal[:], streamBytes[:]...)
+			bytesDescifrados := decryptAESCFB(leerBytes, obtenerClaveCifrado(ruta))
+			bytesTotal = append(bytesTotal[:], bytesDescifrados[:]...)
 		}
 		kind := mime.TypeByExtension("." + formatoArchivo[len(formatoArchivo)-1])
 
-		b := bytes.NewBuffer(streamBytesTotal)
+		b := bytes.NewBuffer(bytesTotal)
 		w.Header().Set("Content-type", kind)
 
 		if _, err := b.WriteTo(w); err != nil {
@@ -584,8 +583,8 @@ func cifrarCarpeta(ruta string) {
 
 func visitEncrypt(path string, f os.FileInfo, err error) error { //funcion para cifrarFicherosUsuarios
 	if f != nil && f.IsDir() == false { //para coger solo los ficheros y no las carpetas
-		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
-		//clavemaestra := obtenerClaveCifrado(path)
+		clavemaestra, err := getMasterKey(rutaMasterKey)
+		check(err)
 		cifrarFichero(path, clavemaestra)
 	}
 	return nil
@@ -597,7 +596,6 @@ func cifrarFichero(path string, clave string) {
 
 	if len(file) > 0 {
 		encryptedFile := encryptAESCFB(file, clave)
-
 		deleteFile(path)
 
 		filenew, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
@@ -616,8 +614,8 @@ func descifrarCarpeta(ruta string) {
 func visitDecrypt(path string, f os.FileInfo, err error) error {
 	//funcion para descifrarFicherosUsuarios
 	if f != nil && f.IsDir() == false { //para coger solo los ficheros y no las carpetas
-		clavemaestra := "{<J*l-&lG.f@GiNtOnIcO@B}%1ckFHb_" //32 bytes para que sea AES256
-		//clavemaestra := obtenerClaveCifrado(path)
+		clavemaestra, err := getMasterKey(rutaMasterKey)
+		check(err)
 		descifrarFichero(path, clavemaestra)
 	}
 	return nil
@@ -629,7 +627,6 @@ func descifrarFichero(path string, clave string) {
 
 	if len(file) > 0 {
 		encryptedFile := decryptAESCFB(file, clave)
-
 		deleteFile(path)
 
 		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666)
@@ -686,59 +683,69 @@ func middlewareAuth(next http.Handler) http.Handler {
 }
 
 func main() {
-	rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
-	createDirIfNotExist(rutaArchivos)
-	createDirIfNotExist(rutaCertificados)
-	createDirIfNotExist(rutaDatabases)
-	stopChan := make(chan os.Signal)
-	signal.Notify(stopChan, os.Interrupt)
+	contraseñamaestra, err := getMasterKey(rutaMasterKey)
+	if err == nil && contraseñamaestra != "" {
+		rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
+		createDirIfNotExist(rutaArchivos)
+		createDirIfNotExist(rutaCertificados)
+		createDirIfNotExist(rutaDatabases)
+		stopChan := make(chan os.Signal)
+		signal.Notify(stopChan, os.Interrupt)
 
-	// Comprueba los certificados, si no existen se generan nuevos
-	err := httpscerts.Check(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem")
-	if err != nil {
-		err = httpscerts.Generate(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem", ":8081")
+		// Comprueba los certificados, si no existen se generan nuevos
+		err := httpscerts.Check(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem")
 		if err != nil {
-			log.Fatal("Error: No se han podido crear los certificados https.")
+			err = httpscerts.Generate(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem", ":8081")
+			cifrarCarpeta(rutaCertificados)
+			if err != nil {
+				log.Fatal("Error: No se han podido crear los certificados https.")
+			}
 		}
+
+		muxa := mux.NewRouter()
+		muxa.HandleFunc("/", handler)
+		muxa.HandleFunc("/login", handlerLogin)
+		muxa.HandleFunc("/register", handlerRegister)
+		muxa.Handle("/checkhash", middlewareAuth(http.HandlerFunc(handlerHash)))
+		muxa.Handle("/upload", middlewareAuth(http.HandlerFunc(handlerUpload)))
+		muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
+		muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile))).Methods("GET")
+		muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerDeleteFile))).Methods("DELETE")
+
+		srv := &http.Server{Addr: ":8081", Handler: muxa}
+
+		log.Println("Descifrando bases de datos...")
+		descifrarCarpeta(rutaDatabases)
+		log.Println("Descifrando certificados https...")
+		descifrarCarpeta(rutaCertificados)
+
+		go func() {
+			log.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
+			if err := srv.ListenAndServeTLS(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem"); err != nil {
+				log.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
+			}
+		}()
+		go func() {
+			log.Println("Poniendo en marcha redireccionamiento HTTP->HTTPS, escuchando puerto 8080")
+			if err := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS)); err != nil {
+				log.Printf("Error al redireccionar http a https: %s\n", err)
+			}
+		}()
+
+		<-stopChan // espera señal SIGINT
+		log.Println("Apagando servidor ...")
+		// apagar servidor de forma segura
+		ctx, fnc := context.WithTimeout(context.Background(), 5*time.Second)
+		fnc()
+		srv.Shutdown(ctx)
+
+		log.Println("Cifrando bases de datos...")
+		cifrarCarpeta(rutaDatabases)
+		log.Println("Cifrando certificados https...")
+		cifrarCarpeta(rutaCertificados)
+
+		log.Println("Servidor detenido correctamente")
+	} else {
+		log.Println("El servidor necesita una master.key para iniciar")
 	}
-
-	muxa := mux.NewRouter()
-	muxa.HandleFunc("/", handler)
-	muxa.HandleFunc("/login", handlerLogin)
-	muxa.HandleFunc("/register", handlerRegister)
-	muxa.Handle("/checkhash", middlewareAuth(http.HandlerFunc(handlerHash)))
-	muxa.Handle("/upload", middlewareAuth(http.HandlerFunc(handlerUpload)))
-	muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
-	muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile))).Methods("GET")
-	muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerDeleteFile))).Methods("DELETE")
-
-	srv := &http.Server{Addr: ":8081", Handler: muxa}
-
-	go func() {
-		log.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
-		if err := srv.ListenAndServeTLS(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem"); err != nil {
-			log.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
-		}
-	}()
-	go func() {
-		log.Println("Poniendo en marcha redireccionamiento HTTP->HTTPS, escuchando puerto 8080")
-		if err := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS)); err != nil {
-			log.Printf("Error al redireccionar http a https: %s\n", err)
-		}
-	}()
-
-	log.Println("Descifrando bases de datos...")
-	descifrarCarpeta(rutaDatabases)
-
-	<-stopChan // espera señal SIGINT
-	log.Println("Apagando servidor ...")
-	// apagar servidor de forma segura
-	ctx, fnc := context.WithTimeout(context.Background(), 5*time.Second)
-	fnc()
-	srv.Shutdown(ctx)
-
-	log.Println("Cifrando bases de datos...")
-	cifrarCarpeta(rutaDatabases)
-
-	log.Println("Servidor detenido correctamente")
 }
