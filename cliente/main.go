@@ -229,9 +229,9 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	} else {
 		respuesta := buf.String()
 		//fmt.Printf("%s\n", string(contents))
-		createDirIfNotExist("./descargas/")
-		createFile("./descargas/" + body.Find("archivoPedido").GetValue())
-		writeFile("./descargas/"+body.Find("archivoPedido").GetValue(), respuesta)
+		createDirIfNotExist("./descargas/" + login)
+		createFile("./descargas/" + login + "/" + body.Find("archivoPedido").GetValue())
+		writeFile("./descargas/"+login+"/"+body.Find("archivoPedido").GetValue(), respuesta)
 		body.Find("texto").SetText("Fichero en descargas: " + body.Find("archivoPedido").GetValue())
 	}
 }

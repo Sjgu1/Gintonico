@@ -91,7 +91,7 @@ func writeFile(path string, content string) {
 
 func createDirIfNotExist(dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0755)
+		err = os.MkdirAll(dir, 0666)
 		if err != nil {
 			panic(err)
 		}
