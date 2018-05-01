@@ -66,6 +66,9 @@ func vistaRegister() string {
 										<input type="text" id="registerUser" class="form-control" placeholder="Username" autocomplete="off">
 									</div>
 									<div class="form-group">
+										<input type="email" id="registerEmail" class="form-control" placeholder="Email" autocomplete="off">
+									</div>
+									<div class="form-group">
 										<input type="password" id="registerPassword" class="form-control" placeholder="Password" autocomplete="off">
 									</div>
 									<div class="form-group">
@@ -103,7 +106,7 @@ func vistaPrincipal() string {
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
 					<ul class="dropdown-menu dropdown-menu-settings" style="background-color: #FF654E">
-					<li><a href="#">Accion increíble</a></li>
+					<li><a id="send-email" href="#">Enviar email</a></li>
 					<li><a href="#">Esta es mejor</a></li>
 					<li role="separator" class="divider"></li>
 					<li><a href="#" id="logout-link"><i class="icon-off"></i>Cerrar sesión</a></li>

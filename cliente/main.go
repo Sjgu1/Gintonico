@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/url"
 	"os"
@@ -26,7 +27,7 @@ type resp struct {
 
 func main() {
 	body = bootstrap.NewElement("div", "wrapper")
-	logo := `<div style="margin:0 auto;width:40%;"><img src="assets/img/logo_alargado.png" style="width:100%;margin:0 auto"/></div>`
+	logo := `<div style="margin:0 auto;width:30%;"><img src="assets/img/logo_alargado.png" style="width:100%;margin:0 auto"/></div>`
 
 	switch mostrar {
 	case "login":
@@ -48,6 +49,7 @@ func main() {
 		body.AddHTML(vistaPrincipal(), nil)
 		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
+		body.Find("send-email").OnEvent(gowd.OnClick, enviarEmail)
 		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
 		body.Find("buttonEliminar").OnEvent(gowd.OnClick, eliminarFichero)
@@ -89,9 +91,11 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("registerUser").GetValue()
+	email := body.Find("registerEmail").GetValue()
 	pass := body.Find("registerPassword").GetValue()
 	confirm := body.Find("confirmPassword").GetValue()
 	data.Set("register", usuario)
+	data.Set("email", email)
 	data.Set("password", encriptarScrypt(pass, usuario))
 	data.Set("confirm", encriptarScrypt(confirm, usuario))
 
@@ -313,4 +317,10 @@ func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	} else {
 		goPrincipal(nil, nil)
 	}
+}
+
+func enviarEmail(sender *gowd.Element, event *gowd.EventElement) {
+	htmlEmail, err := ioutil.ReadFile("assets/email.html")
+	check(err)
+	sendEmail(string(htmlEmail), "lriderg@gmail.com")
 }

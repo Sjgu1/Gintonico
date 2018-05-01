@@ -7,7 +7,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"net/smtp"
 	"os"
 
 	"golang.org/x/crypto/scrypt"
@@ -110,4 +112,27 @@ func formatBytesToString(b int) string {
 	}
 	format := [...]string{"KB", "MB", "GB", "TB"}
 	return fmt.Sprintf("%.1f %s", float64(b)/float64(div), format[exp])
+}
+
+func sendEmail(body string, destinatario string) {
+	from := "gintonico.sds@gmail.com"
+	pass := "Gintonico2018"
+	to := destinatario
+
+	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+
+	msg := "From: " + from + "\n" +
+		"To: " + to + "\n" +
+		"Subject: Gintónico: Confirmar autenticación\n" + mime + body
+
+	err := smtp.SendMail("smtp.gmail.com:587",
+		smtp.PlainAuth("", from, pass, "smtp.gmail.com"),
+		from, []string{to}, []byte(msg))
+
+	if err != nil {
+		log.Printf("smtp error: %s", err)
+		return
+	}
+
+	log.Print("Email enviado")
 }

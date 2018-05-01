@@ -37,11 +37,13 @@ type Users struct {
 
 // User Estructura de usuario
 type User struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Salt     string `json:"salt"`
-	Cifrado  string `json:"cifrado"`
-	Token    string `json:"token"`
+	User        string `json:"user"`
+	Email       string `json:"email"`
+	DobleFactor bool   `json:"doblefactor"`
+	Password    string `json:"password"`
+	Salt        string `json:"salt"`
+	Cifrado     string `json:"cifrado"`
+	Token       string `json:"token"`
 }
 
 // Block Estructura de bloque
@@ -161,6 +163,7 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 
 	type RegisterJSON struct {
 		Register []string `json:"register"`
+		Email    []string `json:"email"`
 		Password []string `json:"password"`
 		Confirm  []string `json:"confirm"`
 	}
@@ -168,20 +171,25 @@ func handlerRegister(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(body, &user)
 	check(err)
 
-	if err == nil && validarRegister(user.Register[0], user.Password[0], user.Confirm[0]) {
-		response(w, true, "Registrado")
+	if err == nil {
+		registrado, mensaje := validarRegister(user.Register[0], user.Email[0], user.Password[0], user.Confirm[0])
+		response(w, registrado, mensaje)
 	} else {
 		response(w, false, "Error al registrar")
 	}
 }
 
-func validarRegister(register string, password string, confirm string) bool {
-	if password != confirm || register == "" || password == "" {
-		return false
+func validarRegister(register string, email string, password string, confirm string) (bool, string) {
+	if password != confirm || email == "" || register == "" || password == "" {
+		return false, "Faltan datos por enviar"
 	}
+	existeUsuario, existeEmail := comprobarExisteUsuarioEmail(register, email)
 
-	if comprobarExisteUsuario(register) {
-		return false
+	if existeUsuario {
+		return false, "Ese usuario ya existe"
+	}
+	if existeEmail {
+		return false, "Ese email ya existe"
 	}
 
 	jsonBytes := leerJSON(rutaUsersBD)
@@ -191,24 +199,30 @@ func validarRegister(register string, password string, confirm string) bool {
 	salt := randomString(32)
 	cifrado := randomString(32)
 
-	users.Users = append(users.Users, User{User: register, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado})
+	users.Users = append(users.Users, User{User: register, Email: email, DobleFactor: false, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado})
 	guardarJSON(rutaUsersBD, &users)
 
-	return true
+	return true, "Registrado correctamente"
 }
 
-func comprobarExisteUsuario(usuario string) bool {
+func comprobarExisteUsuarioEmail(usuario string, email string) (bool, bool) {
 	jsonBytes := leerJSON(rutaUsersBD)
 	var users Users
 	json.Unmarshal(jsonBytes, &users)
+	existeUsuario := false
+	existeEmail := false
 
 	// Comprueba si algun usuario coincide con el del login
 	for i := 0; i < len(users.Users); i++ {
 		if usuario == users.Users[i].User {
-			return true
+			existeUsuario = true
+		}
+
+		if email == users.Users[i].Email {
+			existeEmail = true
 		}
 	}
-	return false
+	return existeUsuario, existeEmail
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {
