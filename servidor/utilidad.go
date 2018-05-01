@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	mathrand "math/rand"
+	"net/smtp"
 	"os"
 	"time"
 
@@ -228,4 +229,29 @@ func getMasterKey(path string) (string, error) {
 		return password.Master, nil
 	}
 	return "", errors.New("Error al obtener la contraseña maestra")
+}
+
+func sendEmail(codigo string, destinatario string) {
+	from := "gintonico.sds@gmail.com"
+	pass := "Gintonico2018"
+	to := destinatario
+	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	first, err := ioutil.ReadFile("email/email-first.html")
+	check(err)
+	last, err := ioutil.ReadFile("email/email-last.html")
+	check(err)
+	msg := "From: " + from + "\n" +
+		"To: " + to + "\n" +
+		"Subject: Gintónico: Confirmar autenticación\n" + mime + string(first) + codigo + string(last)
+
+	err = smtp.SendMail("smtp.gmail.com:587",
+		smtp.PlainAuth("", from, pass, "smtp.gmail.com"),
+		from, []string{to}, []byte(msg))
+
+	if err != nil {
+		log.Printf("smtp error: %s", err)
+		return
+	}
+
+	log.Print("Email enviado a: " + destinatario)
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/url"
 	"os"
@@ -36,12 +35,14 @@ func main() {
 		body.AddHTML(vistaLogin(), nil)
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendLogin)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
+		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
 		break
 	case "register":
 		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
 		body.AddHTML(logo, nil)
 		body.AddHTML(vistaRegister(), nil)
 		body.Find("register-submit").OnEvent(gowd.OnClick, sendRegister)
+		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
 		break
 	case "principal":
@@ -49,10 +50,17 @@ func main() {
 		body.AddHTML(vistaPrincipal(), nil)
 		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
-		body.Find("send-email").OnEvent(gowd.OnClick, enviarEmail)
 		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
 		body.Find("buttonEliminar").OnEvent(gowd.OnClick, eliminarFichero)
+		break
+	case "doblefactor":
+		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
+		body.AddHTML(logo, nil)
+		body.AddHTML(vistaFactor(), nil)
+		body.Find("login-submit").OnEvent(gowd.OnClick, sendDobleFactor)
+		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
+		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
 		break
 	}
 	//start the ui loop
@@ -81,10 +89,15 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	check(err)
 
 	body.Find("texto").SetText(buf.String())
-	if respuesta.Ok == true {
-		login = usuario
-		token = response.Header.Get("Token")
-		goPrincipal(nil, nil)
+	if err == nil && respuesta.Ok == true {
+		if respuesta.Msg == "Doble factor" {
+			login = usuario
+			goDobleFactor(nil, nil)
+		} else {
+			login = usuario
+			token = response.Header.Get("Token")
+			goPrincipal(nil, nil)
+		}
 	}
 }
 
@@ -295,7 +308,6 @@ func peticionNombreFicheros() string {
 				</td>
 			</tr>`
 		}
-
 	}
 	return respuesta
 }
@@ -319,8 +331,28 @@ func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	}
 }
 
-func enviarEmail(sender *gowd.Element, event *gowd.EventElement) {
-	htmlEmail, err := ioutil.ReadFile("assets/email.html")
+func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
+	data := url.Values{} // estructura para contener los valores
+	codigo := body.Find("codigo").GetValue()
+	data.Set("user", login)
+	data.Set("codigo", codigo)
+
+	bytesJSON, err := json.Marshal(data)
 	check(err)
-	sendEmail(string(htmlEmail), "lriderg@gmail.com")
+	reader := bytes.NewReader(bytesJSON)
+
+	response := sendServerPetition("POST", reader, "/doblefactor", "application/json")
+	defer response.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+
+	var respuesta resp
+	err = json.Unmarshal(buf.Bytes(), &respuesta)
+	check(err)
+
+	body.Find("texto").SetText(buf.String())
+	if err == nil && respuesta.Ok == true {
+		token = response.Header.Get("Token")
+		goPrincipal(nil, nil)
+	}
 }

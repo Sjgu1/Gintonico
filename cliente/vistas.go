@@ -173,6 +173,43 @@ func vistaPrincipal() string {
 	`
 }
 
+func vistaFactor() string {
+	return `<div class="container">
+		<div class="row">
+			<div class="col-md-6 col-md-offset-3">
+				<div class="panel panel-login">
+					<div class="panel-heading">
+						<div class="row">
+							<div class="col-xs-6">
+								<a id="login-form-link" href="#" class="active">Iniciar Sesión</a>
+							</div>
+							<div class="col-xs-6">
+								<a id="register-form-link" href="#">Registro</a>
+							</div>
+						</div>
+						<hr>
+					</div>
+					<div class="panel-body">
+						<div class="row">
+							<div class="col-lg-12">
+								<div id="login-form">
+									<div class="form-group">
+										<input type="text" id="codigo" class="form-control" placeholder="Introduzca el codigo enviado por email" autocomplete="unset">
+									</div>
+									<div class="form-group">
+										<button id="login-submit" class="form-control btn btn-login">Iniciar Sesión</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
+}
+
 func goLogin(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "login"
 	login = ""
@@ -187,5 +224,10 @@ func goRegister(sender *gowd.Element, event *gowd.EventElement) {
 
 func goPrincipal(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "principal"
+	main()
+}
+
+func goDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
+	mostrar = "doblefactor"
 	main()
 }

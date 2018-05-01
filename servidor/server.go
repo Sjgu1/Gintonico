@@ -44,6 +44,7 @@ type User struct {
 	Salt        string `json:"salt"`
 	Cifrado     string `json:"cifrado"`
 	Token       string `json:"token"`
+	CodFactor   string `json:"codfactor"`
 }
 
 // Block Estructura de bloque
@@ -123,26 +124,37 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(jsonBytes, &users)
 	check(err)
 
-	if err == nil && validarLogin(user.Login[0], user.Password[0], &users) {
-		token := createJWT(user.Login[0])
-		w.Header().Add("Token", token)
-		guardarToken(token, user.Login[0], &users)
-		response(w, true, token)
+	loginOK, tieneDobleFactor := validarLogin(user.Login[0], user.Password[0], &users)
+
+	if err == nil && loginOK {
+		if tieneDobleFactor {
+			codigoRandom := strings.ToUpper(randomString(5))
+			guardarCodFactor(codigoRandom, user.Login[0], &users)
+			go func() { //en una subrutina para que el servidor responda rápido
+				sendEmail(codigoRandom, getEmail(user.Login[0], &users))
+			}()
+			response(w, true, "Doble factor")
+		} else {
+			token := createJWT(user.Login[0])
+			w.Header().Add("Token", token)
+			guardarToken(token, user.Login[0], &users)
+			response(w, true, token)
+		}
 	} else {
 		response(w, false, "Error al loguear")
 	}
 }
 
-func validarLogin(login string, password string, users *Users) bool {
+func validarLogin(login string, password string, users *Users) (bool, bool) {
 	for i := 0; i < len(users.Users); i++ {
 		if login == users.Users[i].User && encriptarScrypt(password, users.Users[i].Salt) == users.Users[i].Password {
-			return true
+			return true, users.Users[i].DobleFactor
 		}
 	}
-	return false
+	return false, false
 }
 
-func guardarToken(token string, user string, users *Users) {
+func guardarToken(token string, user string, users *Users) bool {
 	var encontrado = false
 	for i := 0; i < len(users.Users) && !encontrado; i++ {
 		if users.Users[i].User == user {
@@ -151,6 +163,28 @@ func guardarToken(token string, user string, users *Users) {
 			encontrado = true
 		}
 	}
+	return encontrado
+}
+
+func guardarCodFactor(codFactor string, user string, users *Users) bool {
+	var encontrado = false
+	for i := 0; i < len(users.Users) && !encontrado; i++ {
+		if users.Users[i].User == user {
+			users.Users[i].CodFactor = codFactor
+			guardarJSON(rutaUsersBD, &users)
+			encontrado = true
+		}
+	}
+	return encontrado
+}
+
+func getEmail(user string, users *Users) string {
+	for i := 0; i < len(users.Users); i++ {
+		if users.Users[i].User == user {
+			return users.Users[i].Email
+		}
+	}
+	return ""
 }
 
 func handlerRegister(w http.ResponseWriter, r *http.Request) {
@@ -217,12 +251,52 @@ func comprobarExisteUsuarioEmail(usuario string, email string) (bool, bool) {
 		if usuario == users.Users[i].User {
 			existeUsuario = true
 		}
-
 		if email == users.Users[i].Email {
 			existeEmail = true
 		}
 	}
 	return existeUsuario, existeEmail
+}
+
+func handlerDobleFactor(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()                                // es necesario parsear el formulario
+	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	body := buf.Bytes()
+
+	type BodyJSON struct {
+		User   []string `json:"user"`
+		Codigo []string `json:"codigo"`
+	}
+	var bodyJSON BodyJSON
+	err1 := json.Unmarshal(body, &bodyJSON)
+	check(err1)
+
+	jsonBytes := leerJSON(rutaUsersBD)
+	var users Users
+	err2 := json.Unmarshal(jsonBytes, &users)
+	check(err2)
+
+	if err1 == nil && err2 == nil && validarCodigo(bodyJSON.Codigo[0], bodyJSON.User[0], &users) {
+		token := createJWT(bodyJSON.User[0])
+		w.Header().Add("Token", token)
+		guardarToken(token, bodyJSON.User[0], &users)
+		guardarCodFactor("", bodyJSON.User[0], &users) //limpio el código una vez se ha utilizado por seguridad
+		response(w, true, token)
+	} else {
+		response(w, false, "Código inválido")
+	}
+}
+
+func validarCodigo(codigo string, user string, users *Users) bool {
+	for i := 0; i < len(users.Users); i++ {
+		if user == users.Users[i].User && codigo == users.Users[i].CodFactor {
+			return true
+		}
+	}
+	return false
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {
@@ -720,6 +794,7 @@ func main() {
 		muxa.HandleFunc("/", handler)
 		muxa.HandleFunc("/login", handlerLogin)
 		muxa.HandleFunc("/register", handlerRegister)
+		muxa.HandleFunc("/doblefactor", handlerDobleFactor)
 		muxa.Handle("/checkhash", middlewareAuth(http.HandlerFunc(handlerHash)))
 		muxa.Handle("/upload", middlewareAuth(http.HandlerFunc(handlerUpload)))
 		muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
