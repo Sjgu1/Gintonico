@@ -48,7 +48,7 @@ func createJWT(username string) string {
 	return tokenstring
 }
 
-func validarToken(tokenRecibido string, username string) bool {
+func validarToken(tokenRecibido string, username string, users *Users) bool {
 	clavemaestra := "b!6J`Ymd}A$*z{#R4E)[uB&WkLYPnqp}"
 	token, err := jwt.Parse(tokenRecibido, func(token *jwt.Token) (interface{}, error) {
 		return []byte(clavemaestra), nil
@@ -71,7 +71,14 @@ func validarToken(tokenRecibido string, username string) bool {
 		log.Println("Usuario de token incorrecto")
 		return false
 	}
-	return true
+
+	tokenEncontrado := false
+	for i := 0; i < len(users.Users) && !tokenEncontrado; i++ {
+		if username == users.Users[i].User && tokenRecibido == users.Users[i].Token {
+			tokenEncontrado = true
+		}
+	}
+	return tokenEncontrado
 }
 
 // Devuelve el string de la cadena encriptada
@@ -253,5 +260,5 @@ func sendEmail(codigo string, destinatario string) {
 		return
 	}
 
-	log.Print("Email enviado a: " + destinatario)
+	log.Println("Email enviado a: " + destinatario)
 }

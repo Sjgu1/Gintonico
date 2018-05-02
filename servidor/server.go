@@ -291,6 +291,9 @@ func handlerDobleFactor(w http.ResponseWriter, r *http.Request) {
 }
 
 func validarCodigo(codigo string, user string, users *Users) bool {
+	if codigo == "" || user == "" {
+		return false
+	}
 	for i := 0; i < len(users.Users); i++ {
 		if user == users.Users[i].User && codigo == users.Users[i].CodFactor {
 			return true
@@ -761,7 +764,11 @@ func obtenerClaveCifrado(path string) string {
 
 func middlewareAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tokenValido := validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"))
+		jsonBytes := leerJSON(rutaUsersBD)
+		var users Users
+		err := json.Unmarshal(jsonBytes, &users)
+		check(err)
+		tokenValido := validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"), &users)
 		if tokenValido {
 			next.ServeHTTP(w, r)
 		} else {
