@@ -284,6 +284,7 @@ func goLogin(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "login"
 	login = ""
 	token = ""
+	password = ""
 	main()
 }
 
@@ -291,11 +292,13 @@ func goRegister(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "register"
 	login = ""
 	token = ""
+	password = ""
 	main()
 }
 
 func goPrincipal(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "principal"
+	password = ""
 	main()
 }
 

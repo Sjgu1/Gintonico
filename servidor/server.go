@@ -267,8 +267,9 @@ func handlerDobleFactor(w http.ResponseWriter, r *http.Request) {
 	body := buf.Bytes()
 
 	type BodyJSON struct {
-		User   []string `json:"user"`
-		Codigo []string `json:"codigo"`
+		User     []string `json:"user"`
+		Password []string `json:"password"`
+		Codigo   []string `json:"codigo"`
 	}
 	var bodyJSON BodyJSON
 	err1 := json.Unmarshal(body, &bodyJSON)
@@ -279,27 +280,36 @@ func handlerDobleFactor(w http.ResponseWriter, r *http.Request) {
 	err2 := json.Unmarshal(jsonBytes, &users)
 	check(err2)
 
-	if err1 == nil && err2 == nil && validarCodigo(bodyJSON.Codigo[0], bodyJSON.User[0], &users) {
+	codigoValido, msg := validarCodigo(bodyJSON.Codigo[0], bodyJSON.User[0], bodyJSON.Password[0], &users)
+
+	if err1 == nil && err2 == nil && codigoValido {
 		token := createJWT(bodyJSON.User[0])
 		w.Header().Add("Token", token)
 		guardarToken(token, bodyJSON.User[0], &users)
 		guardarCodFactor("", bodyJSON.User[0], &users) //limpio el código una vez se ha utilizado por seguridad
-		response(w, true, token)
+		response(w, true, msg)
 	} else {
-		response(w, false, "Código inválido")
+		response(w, false, msg)
 	}
 }
 
-func validarCodigo(codigo string, user string, users *Users) bool {
+func validarCodigo(codigo string, user string, pass string, users *Users) (bool, string) {
+	loginOK, tieneDobleFactor := validarLogin(user, pass, users)
+	if !loginOK {
+		return false, "Credenciales no válidas"
+	}
+	if !tieneDobleFactor {
+		return false, "Este usuario no tiene doble factor"
+	}
 	if codigo == "" || user == "" {
-		return false
+		return false, "Malas credenciales"
 	}
 	for i := 0; i < len(users.Users); i++ {
 		if user == users.Users[i].User && codigo == users.Users[i].CodFactor {
-			return true
+			return true, "Código válido"
 		}
 	}
-	return false
+	return false, "Código inválido"
 }
 
 func handlerHash(w http.ResponseWriter, r *http.Request) {

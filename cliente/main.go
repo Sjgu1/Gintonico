@@ -18,6 +18,7 @@ var body *gowd.Element
 var mostrar = "login"
 var login = ""
 var token = ""
+var password = ""
 
 type resp struct {
 	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
@@ -102,6 +103,7 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	if err == nil && respuesta.Ok == true {
 		if respuesta.Msg == "Doble factor" {
 			login = usuario
+			password = encriptarScrypt(pass, usuario)
 			goDobleFactor(nil, nil)
 		} else {
 			login = usuario
@@ -345,6 +347,7 @@ func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
 	data := url.Values{} // estructura para contener los valores
 	codigo := body.Find("codigo").GetValue()
 	data.Set("user", login)
+	data.Set("password", password)
 	data.Set("codigo", codigo)
 
 	bytesJSON, err := json.Marshal(data)
