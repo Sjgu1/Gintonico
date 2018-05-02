@@ -4,6 +4,12 @@ body {
 	font-family: 'Roboto Slab', serif;
 }
 
+.revert-input {
+	outline: unset !important;
+	-webkit-box-shadow: unset !important;
+	border-color: unset !important;
+}
+
 .panel-login {
 	border-color: #ccc;
 	-webkit-box-shadow: 0px 2px 3px 0px rgba(0, 0, 0, 0.2);
@@ -46,7 +52,7 @@ body {
 .panel-login input[type="email"],
 .panel-login input[type="password"] {
 	border-radius: 5px;
-    padding: 10px;
+	padding: 10px;
 	color: #53A3CD;
 	height: 45px;
 	border: 1px solid #ddd;
@@ -92,7 +98,6 @@ body {
 	color: #53A3CD;
 	background-color: #fff;
 	border-color: #53A3CD;
-
 	outline: none;
 	-webkit-box-shadow: 0 0 0 30px #fff inset;
 }

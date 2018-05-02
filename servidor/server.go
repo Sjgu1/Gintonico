@@ -762,6 +762,85 @@ func obtenerClaveCifrado(path string) string {
 	return claveCifrado
 }
 
+func handlerSendAjustes(w http.ResponseWriter, r *http.Request) {
+	u, err := url.Parse(r.URL.String())
+	check(err)
+	result := strings.Split(u.Path, "/")
+	username := result[len(result)-2]
+
+	type AjustesJSON struct {
+		Email       string `json:"size"`
+		Doblefactor bool   `json:"doblefactor"`
+	}
+
+	jsonBytes := leerJSON(rutaUsersBD)
+	var users Users
+	json.Unmarshal(jsonBytes, &users)
+
+	existe, email, dobleFactor := getAjustes(username, &users)
+
+	if existe {
+		var ajustesJSON = AjustesJSON{Email: email, Doblefactor: dobleFactor}
+		slc, _ := json.Marshal(ajustesJSON)
+		w.Write(slc)
+	} else {
+		response(w, false, "Ajustes no encontrados")
+	}
+}
+
+func getAjustes(user string, users *Users) (bool, string, bool) {
+	for i := 0; i < len(users.Users); i++ {
+		if user == users.Users[i].User {
+			return true, users.Users[i].Email, users.Users[i].DobleFactor
+		}
+	}
+	return false, "", false
+}
+
+func handlerEditAjustes(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()                                // es necesario parsear el formulario
+	w.Header().Set("Content-Type", "text/plain") // cabecera estándar
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(r.Body)
+	body := buf.Bytes()
+
+	type AjustesJSON struct {
+		User        []string `json:"user"`
+		Email       []string `json:"email"`
+		DobleFactor []string `json:"doblefactor"`
+	}
+	var ajustes AjustesJSON
+	err := json.Unmarshal(body, &ajustes)
+	check(err)
+
+	jsonBytes := leerJSON(rutaUsersBD)
+	var users Users
+	json.Unmarshal(jsonBytes, &users)
+
+	dobleFactor, err := strconv.ParseBool(ajustes.DobleFactor[0])
+	check(err)
+	editado := editAjustes(ajustes.User[0], ajustes.Email[0], dobleFactor, &users)
+
+	if editado {
+		response(w, true, "Ajustes editados correctamente")
+	} else {
+		response(w, false, "Los ajustes no han sido editados")
+	}
+}
+
+func editAjustes(user string, email string, dobleFactor bool, users *Users) bool {
+	for i := 0; i < len(users.Users); i++ {
+		if user == users.Users[i].User {
+			users.Users[i].Email = email
+			users.Users[i].DobleFactor = dobleFactor
+			guardarJSON(rutaUsersBD, &users)
+			return true
+		}
+	}
+	return false
+}
+
 func middlewareAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		jsonBytes := leerJSON(rutaUsersBD)
@@ -807,6 +886,8 @@ func main() {
 		muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
 		muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile))).Methods("GET")
 		muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerDeleteFile))).Methods("DELETE")
+		muxa.Handle("/user/{username}/ajustes", middlewareAuth(http.HandlerFunc(handlerSendAjustes))).Methods("GET")
+		muxa.Handle("/user/{username}/ajustes", middlewareAuth(http.HandlerFunc(handlerEditAjustes))).Methods("POST")
 
 		srv := &http.Server{Addr: ":8081", Handler: muxa}
 

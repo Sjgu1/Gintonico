@@ -106,8 +106,7 @@ func vistaPrincipal() string {
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
 					<ul class="dropdown-menu dropdown-menu-settings" style="background-color: #FF654E">
-					<li><a id="send-email" href="#">Enviar email</a></li>
-					<li><a href="#">Esta es mejor</a></li>
+					<li><a id="ajustes" href="#">Cambiar ajustes</a></li>
 					<li role="separator" class="divider"></li>
 					<li><a href="#" id="logout-link"><i class="icon-off"></i>Cerrar sesión</a></li>
 					</ul>
@@ -210,6 +209,77 @@ func vistaFactor() string {
 	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
 }
 
+func vistaAjustes() string {
+	return `<header class="main-header"><nav class="navbar navbar-static-top" style="background-color:#FF654E">
+		<div class="container-fluid">
+			<div class="navbar-header" style="margin-right: 0; margin-left: 0;">
+				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse">
+					<i class="fa fa-bars"></i>
+				</button>
+				<a class="navbar-left" href="#" id="recargar"><img style="max-height: 45px;margin-right: 15px;" src="assets/img/logo_alargado2.png"/></a>
+			</div>
+			<div class="collapse navbar-collapse" id="navbar-collapse">
+				<ul class="nav navbar-nav">
+				<li class="active"><a href="#">Almacenamiento <span class="sr-only">(current)</span></a></li>
+				</ul>
+				<ul class="nav navbar-nav navbar-right" style="margin-right: 15px;">
+				<li><a style="color: #fff;user-select: none;" id="binvenido"> Bienvenido/a ` + login + ` !</a></li>
+				<li class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Ajustes <span class="caret"></span></a>
+					<ul class="dropdown-menu dropdown-menu-settings" style="background-color: #FF654E">
+					<li><a id="ajustes" href="#">Cambiar ajustes</a></li>
+					<li role="separator" class="divider"></li>
+					<li><a href="#" id="logout-link"><i class="icon-off"></i>Cerrar sesión</a></li>
+					</ul>
+				</li>
+				</ul>
+			</div>
+		</div>
+	</nav></header>
+	<div class="content-wrapper" style="min-height:unset;">
+		</br>
+		<p style="margin-left: 15px;" id="texto"/><p style="margin-left: 15px;" id="texto1"/><p style="margin-left: 15px;" id="texto2"/>
+		<div class="row" style="margin: 0 auto;">
+			<div class="col-sm-3 col-md-3">
+			</div>
+			<div class="col-sm-6 col-md-6">
+				<div class="box">
+					<div class="box-header">
+						<h3 class="box-title">Ajustes</h3>
+					</div>
+					<div class="box-body panel-login"">
+						<div class="form-group">
+							<div class="input-group">
+								<span class="input-group-addon" style="border-radius: 4px 0px 0px 4px; min-width: 90px;">Email</span>
+								<input type="email" id="email" class="form-control" placeholder="Email" autocomplete="new-password">
+							</div>
+						</div>
+						<div class="form-group" style="text-align: center;">
+							<div class="checkbox">
+								<label><input id="doblefactor" class="revert-input" type="checkbox" value="">&nbsp;&nbsp;Activar doble factor de autenticación (necesario email válido)</label>
+							</div>
+						</div>
+						</br>
+						<div class="form-group" style="text-align: center;">
+							<button id="ajustes-submit" class="form-control btn btn-login" style="width: 40%;">Guardar cambios</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-3 col-md-3">
+			</div>
+		</div>
+	</div>
+	<footer class="main-footer" style="bottom:0;position:fixed;width:100%">
+		<div class="container">
+			<div class="pull-right hidden-xs">
+				<b>Version: </b>&nbsp;1.0.0
+			</div>
+			<strong>Copyright © 2018&nbsp;<a href="#" style="color:#FF654E"> Gintónico </a>.</strong>&nbsp;&nbsp;&nbsp;Todos los derechos reservados.
+		</div>
+	</footer>`
+}
+
 func goLogin(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "login"
 	login = ""
@@ -219,6 +289,8 @@ func goLogin(sender *gowd.Element, event *gowd.EventElement) {
 
 func goRegister(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "register"
+	login = ""
+	token = ""
 	main()
 }
 
@@ -229,5 +301,10 @@ func goPrincipal(sender *gowd.Element, event *gowd.EventElement) {
 
 func goDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
 	mostrar = "doblefactor"
+	main()
+}
+
+func goAjustes(sender *gowd.Element, event *gowd.EventElement) {
+	mostrar = "ajustes"
 	main()
 }

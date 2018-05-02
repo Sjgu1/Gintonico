@@ -53,6 +53,7 @@ func main() {
 		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
 		body.Find("buttonEliminar").OnEvent(gowd.OnClick, eliminarFichero)
+		body.Find("ajustes").OnEvent(gowd.OnClick, goAjustes)
 		break
 	case "doblefactor":
 		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
@@ -61,6 +62,15 @@ func main() {
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendDobleFactor)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
+		break
+	case "ajustes":
+		body.SetAttribute("style", "background-color:#ecf0f5; height: 100%")
+		body.AddHTML(vistaAjustes(), nil)
+		body.Find("ajustes-submit").OnEvent(gowd.OnClick, sendAjustes)
+		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
+		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
+		body.Find("ajustes").OnEvent(gowd.OnClick, goAjustes)
+		actualizarAjustes()
 		break
 	}
 	//start the ui loop
@@ -354,5 +364,70 @@ func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
 	if err == nil && respuesta.Ok == true {
 		token = response.Header.Get("Token")
 		goPrincipal(nil, nil)
+	}
+}
+
+func actualizarAjustes() {
+	response := sendServerPetition("GET", nil, "/user/"+login+"/ajustes", "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		//goLogin(nil, nil)
+		body.Find("texto").SetText(respuestaJSON.Msg)
+	}
+
+	type AjustesJSON struct {
+		Email       string `json:"size"`
+		Doblefactor bool   `json:"doblefactor"`
+	}
+	var ajustesJSON AjustesJSON
+	err = json.Unmarshal(buf.Bytes(), &ajustesJSON)
+
+	if err == nil {
+		body.Find("email").SetAttribute("value", ajustesJSON.Email)
+		if ajustesJSON.Doblefactor {
+			body.Find("doblefactor").SetAttribute("checked", "checked")
+		}
+	}
+}
+
+func sendAjustes(sender *gowd.Element, event *gowd.EventElement) {
+	email, _ := body.Find("email").GetAttribute("value")
+	dobleFactor, _ := body.Find("doblefactor").GetAttribute("checked")
+	if dobleFactor != "" {
+		dobleFactor = "true"
+	} else {
+		dobleFactor = "false"
+	}
+
+	data := url.Values{} // estructura para contener los valores
+	data.Set("user", login)
+	data.Set("email", email)
+	data.Set("doblefactor", dobleFactor)
+
+	bytesJSON, err := json.Marshal(data)
+	check(err)
+	reader := bytes.NewReader(bytesJSON)
+
+	response := sendServerPetition("POST", reader, "/user/"+login+"/ajustes", "application/json")
+	defer response.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+
+	var respuesta resp
+	err = json.Unmarshal(buf.Bytes(), &respuesta)
+	check(err)
+
+	body.Find("texto").SetText(buf.String())
+	if err == nil && respuesta.Ok == true {
+		//ajustes editados correctamente
+	} else {
+		//error al editar los ajustes
 	}
 }
