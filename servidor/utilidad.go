@@ -226,6 +226,7 @@ func getMasterKey(path string) (string, error) {
 	//PasswordStruct struct para passwords
 	type PasswordStruct struct {
 		Master string `json:"master"`
+		Email  string `json:"email"`
 	}
 
 	jsonBytes := leerJSON(path)
@@ -238,9 +239,27 @@ func getMasterKey(path string) (string, error) {
 	return "", errors.New("Error al obtener la contraseña maestra")
 }
 
+func getEmailKey(path string) (string, error) {
+	//PasswordStruct struct para passwords
+	type PasswordStruct struct {
+		Master string `json:"master"`
+		Email  string `json:"email"`
+	}
+
+	jsonBytes := leerJSON(path)
+	var password PasswordStruct
+	err := json.Unmarshal(jsonBytes, &password)
+	check(err)
+	if password.Email != "" {
+		return password.Email, nil
+	}
+	return "", errors.New("Error al obtener la contraseña del email")
+}
+
 func sendEmail(codigo string, destinatario string) {
 	from := "gintonico.sds@gmail.com"
-	pass := "Gintonico2018"
+	pass, err := getEmailKey(rutaMasterKey)
+	check(err)
 	to := destinatario
 	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 	first, err := ioutil.ReadFile("email/email-first.html")

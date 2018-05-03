@@ -120,20 +120,36 @@ func vistaPrincipal() string {
 		<p style="margin-left: 15px;" id="texto"/><p style="margin-left: 15px;" id="texto1"/><p style="margin-left: 15px;" id="texto2"/>
 		<div class="row" style="margin: 0 auto;">
 			<div class="col-sm-3 col-md-3">
-				<div class="box">
-					<div class="box-header">
-						<h3 class="box-title">Gintónico</h3>
+				<div class="row">
+					<div class="col-sm-12 col-md-12">
+						<div class="box">
+							<div class="box-header">
+								<h3 class="box-title">Gintónico</h3>
+							</div>
+							<div class="box-body">
+								<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
+								<input type="text" id="route" style="display: none" />
+								<input type="text" id="filename" style="display: none" />
+								<input type="button" onclick="document.getElementById('idFile').click();"  value="Subir Archivo" id="file-selector" class="btn btn-primary btn-block btn-principal"/>
+								<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block"> Subir </button>
+								<button type="button"  style="display: none" id="buttonPedir" class="btn btn-primary btn-block">Pedir</button>
+								<input type="text" id="archivoPedido" style="display: none" />
+									
+								<div class="clearfix"></div>
+							</div>
+						</div>
 					</div>
-					<div class="box-body">
-						<input type="file" id="idFile" onchange="subirArchivo()" style="display: none"/>
-						<input type="text" id="route" style="display: none" />
-						<input type="text" id="filename" style="display: none" />
-						<input type="button" onclick="document.getElementById('idFile').click();"  value="Subir Archivo" id="file-selector" class="btn btn-primary btn-block btn-principal"/>
-						<button type="button"  style="display: none"id="buttonEnviar"  class="btn btn-primary btn-block"> Subir </button>
-						<button type="button"  style="display: none" id="buttonPedir" class="btn btn-primary btn-block">Pedir</button>
-						<input type="text" id="archivoPedido" style="display: none" />
-							
-						<div class="clearfix"></div>
+				</div>
+				<div class="row">
+					<div class="col-sm-12 col-md-12">
+						<div class="box">
+							<div class="box-header">
+								<h3 class="box-title">Información</h3>
+							</div>
+							<div class="box-body">
+								Saludos
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -220,7 +236,7 @@ func vistaAjustes() string {
 			</div>
 			<div class="collapse navbar-collapse" id="navbar-collapse">
 				<ul class="nav navbar-nav">
-				<li class="active"><a href="#">Almacenamiento <span class="sr-only">(current)</span></a></li>
+				<li class="active"><a href="#">Ajustes <span class="sr-only">(current)</span></a></li>
 				</ul>
 				<ul class="nav navbar-nav navbar-right" style="margin-right: 15px;">
 				<li><a style="color: #fff;user-select: none;" id="binvenido"> Bienvenido/a ` + login + ` !</a></li>
