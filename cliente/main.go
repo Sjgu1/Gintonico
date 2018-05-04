@@ -481,8 +481,8 @@ func actualizarInfo() string {
 	if err == nil && infoJSON.Files != "" && infoJSON.TotalSize != "" {
 		totalBytes, err := strconv.Atoi(infoJSON.TotalSize)
 		check(err)
-		respuesta = "Tienes: " + infoJSON.Files + " archivos. </br>" +
-			"Ocupan un total de: " + formatBytesToString(totalBytes) + ". </br>"
+		respuesta = `<span class="glyphicon glyphicon-duplicate"></span>&nbsp;&nbsp;Tienes: ` + infoJSON.Files + ` archivos. </br></br>` +
+			`<span class="glyphicon glyphicon-save"></span>&nbsp;&nbsp;Ocupan un total de: ` + formatBytesToString(totalBytes) + `. </br></br>`
 	}
 
 	return respuesta
