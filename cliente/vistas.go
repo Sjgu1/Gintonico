@@ -122,7 +122,7 @@ func vistaPrincipal() string {
 			<div class="col-sm-3 col-md-3">
 				<div class="row">
 					<div class="col-sm-12 col-md-12">
-						<div class="box">
+						<div class="box box-primary">
 							<div class="box-header">
 								<h3 class="box-title">Gintónico</h3>
 							</div>
@@ -142,19 +142,19 @@ func vistaPrincipal() string {
 				</div>
 				<div class="row">
 					<div class="col-sm-12 col-md-12">
-						<div class="box">
+						<div class="box box-primary">
 							<div class="box-header">
 								<h3 class="box-title">Información</h3>
 							</div>
 							<div class="box-body">
-								Saludos
+								` + actualizarInfo() + `
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 			<div class="col-sm-9 col-md-9" style="margin-bottom: 40px;">
-				<div class="box">
+				<div class="box box-primary">
 					<div class="box-header">
 						<h3 class="box-title">Ficheros</h3>
 					</div>
@@ -259,7 +259,7 @@ func vistaAjustes() string {
 			<div class="col-sm-3 col-md-3">
 			</div>
 			<div class="col-sm-6 col-md-6">
-				<div class="box">
+				<div class="box box-primary">
 					<div class="box-header">
 						<h3 class="box-title">Ajustes</h3>
 					</div>

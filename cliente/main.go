@@ -80,61 +80,75 @@ func main() {
 }
 
 func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
-	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("usuario").GetValue()
 	pass := body.Find("contraseña").GetValue()
-	data.Set("login", usuario)
-	data.Set("password", encriptarScrypt(pass, usuario))
 
-	bytesJSON, err := json.Marshal(data)
-	check(err)
-	reader := bytes.NewReader(bytesJSON)
+	if usuario != "" && pass != "" {
+		data := url.Values{} // estructura para contener los valores
+		data.Set("login", usuario)
+		data.Set("password", encriptarScrypt(pass, usuario))
 
-	response := sendServerPetition("POST", reader, "/login", "application/json")
-	defer response.Body.Close()
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(response.Body)
+		bytesJSON, err := json.Marshal(data)
+		check(err)
+		reader := bytes.NewReader(bytesJSON)
 
-	var respuesta resp
-	err = json.Unmarshal(buf.Bytes(), &respuesta)
-	check(err)
+		response := sendServerPetition("POST", reader, "/login", "application/json")
+		defer response.Body.Close()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(response.Body)
 
-	body.Find("texto").SetText(buf.String())
-	if err == nil && respuesta.Ok == true {
-		if respuesta.Msg == "Doble factor" {
-			login = usuario
-			password = encriptarScrypt(pass, usuario)
-			goDobleFactor(nil, nil)
-		} else {
-			login = usuario
-			token = response.Header.Get("Token")
-			goPrincipal(nil, nil)
+		var respuesta resp
+		err = json.Unmarshal(buf.Bytes(), &respuesta)
+		check(err)
+
+		body.Find("texto").SetText(buf.String())
+		if err == nil && respuesta.Ok == true {
+			if respuesta.Msg == "Doble factor" {
+				login = usuario
+				password = encriptarScrypt(pass, usuario)
+				goDobleFactor(nil, nil)
+			} else {
+				login = usuario
+				token = response.Header.Get("Token")
+				goPrincipal(nil, nil)
+			}
 		}
+	} else {
+		body.Find("texto").SetText("Faltan datos por rellenar")
 	}
 }
 
 func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
-	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("registerUser").GetValue()
 	email := body.Find("registerEmail").GetValue()
 	pass := body.Find("registerPassword").GetValue()
 	confirm := body.Find("confirmPassword").GetValue()
-	data.Set("register", usuario)
-	data.Set("email", email)
-	data.Set("password", encriptarScrypt(pass, usuario))
-	data.Set("confirm", encriptarScrypt(confirm, usuario))
 
-	bytesJSON, err := json.Marshal(data)
-	check(err)
-	reader := bytes.NewReader(bytesJSON)
+	if usuario != "" && email != "" && pass != "" && confirm != "" {
+		if pass == confirm {
+			data := url.Values{} // estructura para contener los valores
+			data.Set("register", usuario)
+			data.Set("email", email)
+			data.Set("password", encriptarScrypt(pass, usuario))
+			data.Set("confirm", encriptarScrypt(confirm, usuario))
 
-	response := sendServerPetition("POST", reader, "/register", "application/json")
-	defer response.Body.Close()
+			bytesJSON, err := json.Marshal(data)
+			check(err)
+			reader := bytes.NewReader(bytesJSON)
 
-	s := streamToString(response.Body)
-	body.Find("texto").SetText(s)
-	body.Find("login-form-link").RemoveAttribute("active")
-	body.Find("register-form-link").SetClass("active")
+			response := sendServerPetition("POST", reader, "/register", "application/json")
+			defer response.Body.Close()
+
+			s := streamToString(response.Body)
+			body.Find("texto").SetText(s)
+			body.Find("login-form-link").RemoveAttribute("active")
+			body.Find("register-form-link").SetClass("active")
+		} else {
+			body.Find("texto").SetText("Las contraseñas no coinciden")
+		}
+	} else {
+		body.Find("texto").SetText("Faltan datos por rellenar")
+	}
 }
 
 func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
@@ -266,7 +280,7 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 }
 
 func peticionNombreFicheros() string {
-	response := sendServerPetition("GET", nil, "/user/"+login, "application/json")
+	response := sendServerPetition("GET", nil, "/user/"+login+"/files", "application/json")
 	defer response.Body.Close()
 
 	buf := new(bytes.Buffer)
@@ -344,29 +358,34 @@ func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 }
 
 func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
-	data := url.Values{} // estructura para contener los valores
 	codigo := body.Find("codigo").GetValue()
-	data.Set("user", login)
-	data.Set("password", password)
-	data.Set("codigo", codigo)
 
-	bytesJSON, err := json.Marshal(data)
-	check(err)
-	reader := bytes.NewReader(bytesJSON)
+	if codigo != "" {
+		data := url.Values{} // estructura para contener los valores
+		data.Set("user", login)
+		data.Set("password", password)
+		data.Set("codigo", codigo)
 
-	response := sendServerPetition("POST", reader, "/doblefactor", "application/json")
-	defer response.Body.Close()
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(response.Body)
+		bytesJSON, err := json.Marshal(data)
+		check(err)
+		reader := bytes.NewReader(bytesJSON)
 
-	var respuesta resp
-	err = json.Unmarshal(buf.Bytes(), &respuesta)
-	check(err)
+		response := sendServerPetition("POST", reader, "/doblefactor", "application/json")
+		defer response.Body.Close()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(response.Body)
 
-	body.Find("texto").SetText(buf.String())
-	if err == nil && respuesta.Ok == true {
-		token = response.Header.Get("Token")
-		goPrincipal(nil, nil)
+		var respuesta resp
+		err = json.Unmarshal(buf.Bytes(), &respuesta)
+		check(err)
+
+		body.Find("texto").SetText(buf.String())
+		if err == nil && respuesta.Ok == true {
+			token = response.Header.Get("Token")
+			goPrincipal(nil, nil)
+		}
+	} else {
+		body.Find("texto").SetText("Introduce algún código")
 	}
 }
 
@@ -433,4 +452,38 @@ func sendAjustes(sender *gowd.Element, event *gowd.EventElement) {
 	} else {
 		//error al editar los ajustes
 	}
+}
+
+func actualizarInfo() string {
+	response := sendServerPetition("GET", nil, "/user/"+login+"/info", "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+	respuesta := ""
+
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		//return respuestaJSON.Msg
+		//goLogin(nil, nil)
+		return respuesta
+	}
+
+	type InfoJSON struct {
+		Files     string `json:"files"`
+		TotalSize string `json:"totalsize"`
+	}
+	var infoJSON InfoJSON
+	err = json.Unmarshal(buf.Bytes(), &infoJSON)
+
+	if err == nil && infoJSON.Files != "" && infoJSON.TotalSize != "" {
+		totalBytes, err := strconv.Atoi(infoJSON.TotalSize)
+		check(err)
+		respuesta = "Tienes: " + infoJSON.Files + " archivos. </br>" +
+			"Ocupan un total de: " + formatBytesToString(totalBytes) + ". </br>"
+	}
+
+	return respuesta
 }

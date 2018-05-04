@@ -458,7 +458,7 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 	u, err := url.Parse(r.URL.String())
 	check(err)
 	result := strings.Split(u.Path, "/")
-	username := result[len(result)-1]
+	username := result[len(result)-2]
 
 	type FilesJSON struct {
 		Filename []string `json:"filename"`
@@ -469,6 +469,18 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 	var files Files
 	json.Unmarshal(jsonBytes, &files)
 
+	filesUser, tamFiles := getFilesUser(username, &files)
+	var filesJSON = FilesJSON{Filename: filesUser, Size: tamFiles}
+
+	if len(filesUser) > 0 {
+		slc, _ := json.Marshal(filesJSON)
+		w.Write(slc)
+	} else {
+		response(w, false, "No tienes ficheros subidos")
+	}
+}
+
+func getFilesUser(username string, files *Files) ([]string, []string) {
 	var filesUser []string
 	var tamFiles []string
 	for i := 0; i < len(files.Files); i++ {
@@ -483,15 +495,7 @@ func handlerShowUserFiles(w http.ResponseWriter, r *http.Request) {
 			tamFiles = append(tamFiles, total)
 		}
 	}
-
-	var filesJSON = FilesJSON{Filename: filesUser, Size: tamFiles}
-
-	if len(filesUser) > 0 {
-		slc, _ := json.Marshal(filesJSON)
-		w.Write(slc)
-	} else {
-		response(w, false, "No tienes ficheros subidos")
-	}
+	return filesUser, tamFiles
 }
 
 func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
@@ -851,6 +855,34 @@ func editAjustes(user string, email string, dobleFactor bool, users *Users) bool
 	return false
 }
 
+func handlerShowInfo(w http.ResponseWriter, r *http.Request) {
+	u, err := url.Parse(r.URL.String())
+	check(err)
+	result := strings.Split(u.Path, "/")
+	username := result[len(result)-2]
+
+	jsonBytes := leerJSON(rutaFilesBD)
+	var files Files
+	json.Unmarshal(jsonBytes, &files)
+	filesUser, tamFiles := getFilesUser(username, &files)
+	archivosTotal := strconv.Itoa(len(filesUser))
+	tamTotal := 0
+	for i := range tamFiles {
+		tam, err := strconv.Atoi(tamFiles[i])
+		check(err)
+		tamTotal += tam
+	}
+	totalTam := strconv.Itoa(tamTotal)
+
+	type InfoJSON struct {
+		Files     string `json:"files"`
+		TotalSize string `json:"totalsize"`
+	}
+	var infoJSON = InfoJSON{Files: archivosTotal, TotalSize: totalTam}
+	slc, _ := json.Marshal(infoJSON)
+	w.Write(slc)
+}
+
 func middlewareAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		jsonBytes := leerJSON(rutaUsersBD)
@@ -893,11 +925,12 @@ func main() {
 		muxa.HandleFunc("/doblefactor", handlerDobleFactor)
 		muxa.Handle("/checkhash", middlewareAuth(http.HandlerFunc(handlerHash)))
 		muxa.Handle("/upload", middlewareAuth(http.HandlerFunc(handlerUpload)))
-		muxa.Handle("/user/{username}", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
+		muxa.Handle("/user/{username}/files", middlewareAuth(http.HandlerFunc(handlerShowUserFiles)))
 		muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerSendFile))).Methods("GET")
 		muxa.Handle("/user/{username}/file/{filename}", middlewareAuth(http.HandlerFunc(handlerDeleteFile))).Methods("DELETE")
 		muxa.Handle("/user/{username}/ajustes", middlewareAuth(http.HandlerFunc(handlerSendAjustes))).Methods("GET")
 		muxa.Handle("/user/{username}/ajustes", middlewareAuth(http.HandlerFunc(handlerEditAjustes))).Methods("POST")
+		muxa.Handle("/user/{username}/info", middlewareAuth(http.HandlerFunc(handlerShowInfo)))
 
 		srv := &http.Server{Addr: ":8081", Handler: muxa}
 

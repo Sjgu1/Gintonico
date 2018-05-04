@@ -262,22 +262,141 @@ func sendEmail(codigo string, destinatario string) {
 	check(err)
 	to := destinatario
 	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	first, err := ioutil.ReadFile("email/email-first.html")
-	check(err)
-	last, err := ioutil.ReadFile("email/email-last.html")
-	check(err)
-	msg := "From: " + from + "\n" +
-		"To: " + to + "\n" +
-		"Subject: Gintónico: Confirmar autenticación\n" + mime + string(first) + codigo + string(last)
 
-	err = smtp.SendMail("smtp.gmail.com:587",
-		smtp.PlainAuth("", from, pass, "smtp.gmail.com"),
+	msg := "From: " + from + "\n" + "To: " + to + "\n" +
+		"Subject: Gintónico: Confirmar autenticación\n" + mime + email(codigo)
+
+	err = smtp.SendMail("smtp.gmail.com:587", smtp.PlainAuth("", from, pass, "smtp.gmail.com"),
 		from, []string{to}, []byte(msg))
 
 	if err != nil {
 		log.Printf("smtp error: %s", err)
 		return
 	}
-
 	log.Println("Email enviado a: " + destinatario)
+}
+
+func email(codigo string) string {
+	return `<!doctype html>
+	<html style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+	
+	<head>
+	  	<meta name="viewport" content="width=device-width" />
+	  	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	  	<title>Gintónico: Confirmar autenticación</title>
+	
+	  	<style type="text/css">
+			img {
+				max-width: 100%;
+			}
+			body {
+				-webkit-font-smoothing: antialiased;
+				-webkit-text-size-adjust: none;
+				width: 100% !important;
+				height: 100%;
+				line-height: 1.6em;
+				background-color: #f6f6f6;
+			}
+			@media only screen and (max-width: 640px) {
+				body {
+					padding: 0 !important;
+				}
+				h1 {
+					font-weight: 800 !important;
+					margin: 20px 0 5px !important;
+					font-size: 22px !important;
+				}
+				h2 {
+					font-weight: 800 !important;
+					margin: 20px 0 5px !important;
+					font-size: 18px !important;
+				}
+				h3 {
+					font-weight: 800 !important;
+					margin: 20px 0 5px !important;
+					font-size: 16px !important;
+				}
+				h4 {
+					font-weight: 800 !important;
+					margin: 20px 0 5px !important;
+				}
+				.container {
+					padding: 0 !important;
+					width: 100% !important;
+				}
+				.content {
+					padding: 0 !important;
+				}
+				.content-wrap {
+					padding: 10px !important;
+				}
+				.invoice {
+					width: 100% !important;
+				}
+			}
+	  </style>
+	</head>
+	
+	<body style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none; width: 100% !important; height: 100%; line-height: 1.6em; background-color: #f6f6f6; margin: 0;" bgcolor="#f6f6f6">
+		<table class="body-wrap" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; width: 100%; background-color: #f6f6f6; margin: 0;" bgcolor="#f6f6f6">
+			<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+				<td style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0;" valign="top"></td>
+				<td class="container" width="600" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; display: block !important; max-width: 600px !important; clear: both !important; margin: 0 auto;" valign="top">
+					<div class="content" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; max-width: 600px; display: block; margin: 0 auto; padding: 20px;">
+						<table class="main" width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; border-radius: 3px; background-color: #fff; margin: 0; border: 1px solid #e9e9e9;" bgcolor="#fff">
+							<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+								<td class="alert alert-warning" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 16px; vertical-align: top; color: #fff; font-weight: 500; text-align: center; border-radius: 3px 3px 0 0; background-color: #FF654E; margin: 0; padding: 20px;" align="center" bgcolor="#FF654E" valign="top">
+									Gintónico, Doble factor de autenticación.
+								</td>
+							</tr>
+							<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+								<td class="content-wrap" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 20px;" valign="top">
+									<table width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+										<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+											<td class="content-block" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 0 0 20px;" valign="top">
+												Recientemente se ha intentado acceder a tu cuenta de Gintónico con tu usuario y
+												<strong style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">contraseña</strong>.
+											</td>
+										</tr>
+										<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+											<td class="content-block" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 0 0 20px;" valign="top">
+												Si has sido tú, introduce el código siguiente en el programa e inicia sesión con normalidad.
+												</br>
+												Si no has sido tú, cambia tus credenciales lo más rápido posible y/o contacta con algún administrador.
+											</td>
+										</tr>
+										<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+											<td class="content-block" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 0 0 20px;" valign="top">
+												<p style="width:100%; text-align: center; letter-spacing: 1.5px; color: #53A3CD; font-weight: 700;font-size: 2em;">
+													` + codigo + `
+												</p>
+											</td>
+										</tr>
+										<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+											<td class="content-block" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0; padding: 0 0 20px;" valign="top">
+												Gracias por escoger ©Gintónico.
+											</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+						<div class="footer" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; width: 100%; clear: both; color: #999; margin: 0; padding: 20px;">
+							<table width="100%" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+								<tr style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; margin: 0;">
+									<td class="aligncenter content-block" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 12px; vertical-align: top; color: #999; text-align: center; margin: 0; padding: 0 0 20px;" align="center" valign="top">
+										<a href="#" style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 12px; color: #999; text-decoration: underline; margin: 0;">
+											Desuscríbete
+										</a> de estas alertas.
+									</td>
+								</tr>
+							</table>
+						</div>
+					</div>
+				</td>
+				<td style="font-family: 'Helvetica Neue',Helvetica,Arial,sans-serif; box-sizing: border-box; font-size: 14px; vertical-align: top; margin: 0;" valign="top"></td>
+			</tr>
+		</table>
+	</body>
+	</html>`
 }
