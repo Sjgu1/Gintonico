@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,14 +38,15 @@ type Users struct {
 
 // User Estructura de usuario
 type User struct {
-	User        string `json:"user"`
-	Email       string `json:"email"`
-	DobleFactor bool   `json:"doblefactor"`
-	Password    string `json:"password"`
-	Salt        string `json:"salt"`
-	Cifrado     string `json:"cifrado"`
-	Token       string `json:"token"`
-	CodFactor   string `json:"codfactor"`
+	User          string `json:"user"`
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	Salt          string `json:"salt"`
+	Cifrado       string `json:"cifrado"`
+	Token         string `json:"token"`
+	FactorEnabled bool   `json:"factorEnabled"`
+	FactorCode    string `json:"factorCode"`
+	FactorExp     string `json:"factorExp"`
 }
 
 // Block Estructura de bloque
@@ -129,13 +131,15 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 	if err == nil && loginOK {
 		if tieneDobleFactor {
 			codigoRandom := strings.ToUpper(randomString(5))
-			guardarCodFactor(codigoRandom, user.Login[0], &users)
+			hash := hashSHA512([]byte(codigoRandom))
+			codigoHashed := hex.EncodeToString(hash[:])
+			guardarCodFactor(codigoHashed, user.Login[0], &users)
 			go func() { //en una subrutina para que el servidor responda rápido
 				sendEmail(codigoRandom, getEmail(user.Login[0], &users))
 			}()
 			response(w, true, "Doble factor")
 		} else {
-			token := createJWT(user.Login[0])
+			token := createJWTUser(user.Login[0])
 			w.Header().Add("Token", token)
 			guardarToken(token, user.Login[0], &users)
 			response(w, true, token)
@@ -148,7 +152,7 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 func validarLogin(login string, password string, users *Users) (bool, bool) {
 	for i := 0; i < len(users.Users); i++ {
 		if login == users.Users[i].User && encriptarScrypt(password, users.Users[i].Salt) == users.Users[i].Password {
-			return true, users.Users[i].DobleFactor
+			return true, users.Users[i].FactorEnabled
 		}
 	}
 	return false, false
@@ -170,7 +174,8 @@ func guardarCodFactor(codFactor string, user string, users *Users) bool {
 	var encontrado = false
 	for i := 0; i < len(users.Users) && !encontrado; i++ {
 		if users.Users[i].User == user {
-			users.Users[i].CodFactor = codFactor
+			users.Users[i].FactorCode = codFactor
+			users.Users[i].FactorExp = strconv.Itoa(int(time.Now().Add(time.Minute * 2).Unix()))
 			guardarJSON(rutaUsersBD, &users)
 			encontrado = true
 		}
@@ -233,7 +238,7 @@ func validarRegister(register string, email string, password string, confirm str
 	salt := randomString(32)
 	cifrado := randomString(32)
 
-	users.Users = append(users.Users, User{User: register, Email: email, DobleFactor: false, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado})
+	users.Users = append(users.Users, User{User: register, Email: email, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado, FactorEnabled: false})
 	guardarJSON(rutaUsersBD, &users)
 
 	return true, "Registrado correctamente"
@@ -283,10 +288,9 @@ func handlerDobleFactor(w http.ResponseWriter, r *http.Request) {
 	codigoValido, msg := validarCodigo(bodyJSON.Codigo[0], bodyJSON.User[0], bodyJSON.Password[0], &users)
 
 	if err1 == nil && err2 == nil && codigoValido {
-		token := createJWT(bodyJSON.User[0])
+		token := createJWTUser(bodyJSON.User[0])
 		w.Header().Add("Token", token)
 		guardarToken(token, bodyJSON.User[0], &users)
-		guardarCodFactor("", bodyJSON.User[0], &users) //limpio el código una vez se ha utilizado por seguridad
 		response(w, true, msg)
 	} else {
 		response(w, false, msg)
@@ -305,7 +309,12 @@ func validarCodigo(codigo string, user string, pass string, users *Users) (bool,
 		return false, "Malas credenciales"
 	}
 	for i := 0; i < len(users.Users); i++ {
-		if user == users.Users[i].User && codigo == users.Users[i].CodFactor {
+		if user == users.Users[i].User && codigo == users.Users[i].FactorCode {
+			tiempoFactor, err := strconv.ParseFloat(users.Users[i].FactorExp, 64)
+			check(err)
+			if tiempoFactor < float64(time.Now().Unix()) {
+				return false, "El código ha expirado"
+			}
 			return true, "Código válido"
 		}
 	}
@@ -822,7 +831,7 @@ func handlerSendAjustes(w http.ResponseWriter, r *http.Request) {
 func getAjustes(user string, users *Users) (bool, string, bool) {
 	for i := 0; i < len(users.Users); i++ {
 		if user == users.Users[i].User {
-			return true, users.Users[i].Email, users.Users[i].DobleFactor
+			return true, users.Users[i].Email, users.Users[i].FactorEnabled
 		}
 	}
 	return false, "", false
@@ -864,7 +873,7 @@ func editAjustes(user string, email string, dobleFactor bool, users *Users) bool
 	for i := 0; i < len(users.Users); i++ {
 		if user == users.Users[i].User {
 			users.Users[i].Email = email
-			users.Users[i].DobleFactor = dobleFactor
+			users.Users[i].FactorEnabled = dobleFactor
 			guardarJSON(rutaUsersBD, &users)
 			return true
 		}
@@ -906,7 +915,7 @@ func middlewareAuth(next http.Handler) http.Handler {
 		var users Users
 		err := json.Unmarshal(jsonBytes, &users)
 		check(err)
-		tokenValido := validarToken(r.Header.Get("Authorization"), r.Header.Get("Username"), &users)
+		tokenValido := validarTokenUser(r.Header.Get("Authorization"), r.Header.Get("Username"), &users)
 		if tokenValido {
 			next.ServeHTTP(w, r)
 		} else {

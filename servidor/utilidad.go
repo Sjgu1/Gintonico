@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -27,7 +28,7 @@ func check(e error) {
 	}
 }
 
-func createJWT(username string) string {
+func createJWTUser(username string) string {
 	//UserStruct para el token
 	type UserStruct struct {
 		Username string `json:"username"`
@@ -42,14 +43,16 @@ func createJWT(username string) string {
 	claims["aud"] = username
 	token.Claims = claims
 	// token -> string. Only server knows this secret (foobar).
-	clavemaestra := "b!6J`Ymd}A$*z{#R4E)[uB&WkLYPnqp}"
+	clavemaestra, err := getTokenKey(rutaMasterKey)
+	check(err)
 	tokenstring, err := token.SignedString([]byte(clavemaestra))
 	check(err)
 	return tokenstring
 }
 
-func validarToken(tokenRecibido string, username string, users *Users) bool {
-	clavemaestra := "b!6J`Ymd}A$*z{#R4E)[uB&WkLYPnqp}"
+func validarTokenUser(tokenRecibido string, username string, users *Users) bool {
+	clavemaestra, err := getTokenKey(rutaMasterKey)
+	check(err)
 	token, err := jwt.Parse(tokenRecibido, func(token *jwt.Token) (interface{}, error) {
 		return []byte(clavemaestra), nil
 	})
@@ -185,6 +188,10 @@ func encryptAESCFB(data []byte, keystring string) []byte {
 	return ciphertext
 }
 
+func hashSHA512(datos []byte) [64]byte {
+	return sha512.Sum512(datos)
+}
+
 func deleteFile(path string) {
 	os.Remove(path)
 	//check(err)
@@ -222,13 +229,14 @@ func guardarJSON(ruta string, any interface{}) {
 	check(err)
 }
 
-func getMasterKey(path string) (string, error) {
-	//PasswordStruct struct para passwords
-	type PasswordStruct struct {
-		Master string `json:"master"`
-		Email  string `json:"email"`
-	}
+//PasswordStruct struct para passwords
+type PasswordStruct struct {
+	Master string `json:"master"`
+	Token  string `json:"token"`
+	Email  string `json:"email"`
+}
 
+func getMasterKey(path string) (string, error) {
 	jsonBytes := leerJSON(path)
 	var password PasswordStruct
 	err := json.Unmarshal(jsonBytes, &password)
@@ -240,12 +248,6 @@ func getMasterKey(path string) (string, error) {
 }
 
 func getEmailKey(path string) (string, error) {
-	//PasswordStruct struct para passwords
-	type PasswordStruct struct {
-		Master string `json:"master"`
-		Email  string `json:"email"`
-	}
-
 	jsonBytes := leerJSON(path)
 	var password PasswordStruct
 	err := json.Unmarshal(jsonBytes, &password)
@@ -254,6 +256,17 @@ func getEmailKey(path string) (string, error) {
 		return password.Email, nil
 	}
 	return "", errors.New("Error al obtener la contraseña del email")
+}
+
+func getTokenKey(path string) (string, error) {
+	jsonBytes := leerJSON(path)
+	var password PasswordStruct
+	err := json.Unmarshal(jsonBytes, &password)
+	check(err)
+	if password.Token != "" {
+		return password.Token, nil
+	}
+	return "", errors.New("Error al obtener la contraseña del token")
 }
 
 func sendEmail(codigo string, destinatario string) {

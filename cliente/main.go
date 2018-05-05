@@ -364,7 +364,9 @@ func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
 		data := url.Values{} // estructura para contener los valores
 		data.Set("user", login)
 		data.Set("password", password)
-		data.Set("codigo", codigo)
+		hash := hashSHA512([]byte(codigo))
+		codigoHashed := hex.EncodeToString(hash[:])
+		data.Set("codigo", codigoHashed)
 
 		bytesJSON, err := json.Marshal(data)
 		check(err)
