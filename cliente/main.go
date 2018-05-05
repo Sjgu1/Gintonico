@@ -454,7 +454,7 @@ func sendAjustes(sender *gowd.Element, event *gowd.EventElement) {
 	}
 }
 
-func actualizarInfo() string {
+func getInfo() string {
 	response := sendServerPetition("GET", nil, "/user/"+login+"/info", "application/json")
 	defer response.Body.Close()
 

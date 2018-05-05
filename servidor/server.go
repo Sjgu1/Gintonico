@@ -532,8 +532,10 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 					if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block {
 						otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block, &files)
 						if !otroUsuarioTiene {
-							deleteFile(rutaArchivos + bloquesDeArchivo[i].Block)
-							eliminarBloque(bloquesDeArchivo[i].Block, &blocks)
+							if !isBlockUsed(userSolicitante, bloquesDeArchivo[i].Block, &files) {
+								deleteFile(rutaArchivos + bloquesDeArchivo[i].Block)
+								eliminarBloque(bloquesDeArchivo[i].Block, &blocks)
+							}
 						} else {
 							claveOriginal, nuevaClave, err := obtenerClavesUsuarios(bloquesDeArchivo[i].Block, otroUsuarioBloque)
 							check(err)
@@ -629,6 +631,21 @@ func checkUsersBlocks(username string, block string, files *Files) (string, bool
 		}
 	}
 	return "false", false
+}
+
+func isBlockUsed(username string, block string, files *Files) bool {
+	contador := 0
+	for i := 0; i < len(files.Files); i++ {
+		for j := 0; j < len(files.Files[i].Order); j++ {
+			if files.Files[i].Order[j].Block == block && files.Files[i].User == username {
+				contador++
+			}
+		}
+	}
+	if contador > 1 {
+		return true
+	}
+	return false
 }
 
 func handlerSendFile(w http.ResponseWriter, r *http.Request) {

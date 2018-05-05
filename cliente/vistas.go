@@ -146,8 +146,8 @@ func vistaPrincipal() string {
 							<div class="box-header">
 								<h3 class="box-title">Información</h3>
 							</div>
-							<div class="box-body">
-								` + actualizarInfo() + `
+							<div class="box-body" style="padding-left: 25px;">
+								` + getInfo() + `
 							</div>
 						</div>
 					</div>
