@@ -152,9 +152,11 @@ func handlerLogin(w http.ResponseWriter, r *http.Request) {
 func validarLogin(login string, password string, users *Users) (bool, bool) {
 	for i := 0; i < len(users.Users); i++ {
 		if login == users.Users[i].User && encriptarScrypt(password, users.Users[i].Salt) == users.Users[i].Password {
+			log.Println("Usuario: " + login + " --> Login correcto")
 			return true, users.Users[i].FactorEnabled
 		}
 	}
+	log.Println("Usuario: " + login + " --> Login incorrecto")
 	return false, false
 }
 
@@ -225,9 +227,11 @@ func validarRegister(register string, email string, password string, confirm str
 	existeUsuario, existeEmail := comprobarExisteUsuarioEmail(register, email)
 
 	if existeUsuario {
+		log.Println("Usuario: " + register + " --> Register incorrecto, ya existe el usuario")
 		return false, "Ese usuario ya existe"
 	}
 	if existeEmail {
+		log.Println("Usuario: " + register + " --> Register incorrecto, ya existe el email")
 		return false, "Ese email ya existe"
 	}
 
@@ -241,6 +245,7 @@ func validarRegister(register string, email string, password string, confirm str
 	users.Users = append(users.Users, User{User: register, Email: email, Password: encriptarScrypt(password, salt), Salt: salt, Cifrado: cifrado, FactorEnabled: false})
 	guardarJSON(rutaUsersBD, &users)
 
+	log.Println("Usuario: " + register + " --> Register correcto")
 	return true, "Registrado correctamente"
 }
 
@@ -291,8 +296,10 @@ func handlerDobleFactor(w http.ResponseWriter, r *http.Request) {
 		token := createJWTUser(bodyJSON.User[0])
 		w.Header().Add("Token", token)
 		guardarToken(token, bodyJSON.User[0], &users)
+		log.Println("Usuario: " + bodyJSON.User[0] + " --> Doble factor de autenticación correcto")
 		response(w, true, msg)
 	} else {
+		log.Println("Usuario: " + bodyJSON.User[0] + " --> Doble factor de autenticación incorrecto")
 		response(w, false, msg)
 	}
 }
@@ -925,6 +932,15 @@ func middlewareAuth(next http.Handler) http.Handler {
 }
 
 func main() {
+	//Archivo log
+	f, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+
 	contraseñamaestra, err := getMasterKey(rutaMasterKey)
 	if err == nil && contraseñamaestra != "" {
 		rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
