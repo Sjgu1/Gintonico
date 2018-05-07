@@ -418,6 +418,8 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	block.Block = path
 	registrarBloque(&block)                                                                 //lo guarda en Blocks
 	registrarFileUsuario(r.FormValue("Username"), decodeURLB64(handler.Filename), position) //lo guarda en Files
+	comprobarBloquesSueltos()
+
 	cifrarFichero(rutaArchivos+path, obtenerClaveCifrado(rutaArchivos+path))
 }
 
@@ -609,6 +611,33 @@ func eliminarBloquesUsuario(bloquesDeArchivo []BlockPosition, userSolicitante st
 					bloqueCambiado = true
 				}
 			}
+		}
+	}
+	guardarJSON(rutaBlocksBD, &blocks)
+}
+
+func comprobarBloquesSueltos() {
+	jsonBytes := leerJSON(rutaFilesBD)
+	var files Files
+	json.Unmarshal(jsonBytes, &files)
+
+	jsonBytesBloques := leerJSON(rutaBlocksBD)
+	var blocks Blocks
+	json.Unmarshal(jsonBytesBloques, &blocks)
+
+	for i := 0; i < len(blocks.Blocks); i++ {
+		asignado := false
+		for j := 0; j < len(files.Files) && !asignado; j++ {
+			for k := 0; k < len(files.Files[j].Order) && !asignado; k++ {
+				if blocks.Blocks[i].Block == files.Files[j].Order[k].Block {
+					asignado = true
+				}
+			}
+		}
+		if !asignado {
+			deleteFile(rutaArchivos + blocks.Blocks[i].Block)
+			eliminarBloque(blocks.Blocks[i].Block, &blocks)
+
 		}
 	}
 	guardarJSON(rutaBlocksBD, &blocks)
