@@ -7,3 +7,4 @@ servidor
 /databases/*
 /certificados
 /certificados/*
+log.txt

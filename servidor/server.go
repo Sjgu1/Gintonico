@@ -80,7 +80,8 @@ type Files struct {
 	Files []File `json:"files"`
 }
 
-const rutaMasterKey = "master.key"
+const rutaMasterKey = "./master.key"
+const rutaLog = "./log.txt"
 const rutaArchivos = "./archivos/"
 const rutaCertificados = "./certificados"
 const rutaDatabases = "./databases"
@@ -362,12 +363,11 @@ func handlerHash(w http.ResponseWriter, r *http.Request) {
 }
 
 func comprobarHash(cont int, hash string, tam int, user string, filename string) bool {
-	parte := strconv.Itoa(cont)
-
-	var position BlockPosition
 	existeBloque, nombreBloque := existeBloqueHash(hash)
 
 	if existeBloque {
+		var position BlockPosition
+		parte := strconv.Itoa(cont)
 		position.Block = nombreBloque
 		position.Position = parte
 		position.Size = strconv.Itoa(tam)
@@ -406,6 +406,7 @@ func handlerUpload(w http.ResponseWriter, r *http.Request) {
 	f, err := os.OpenFile(rutaArchivos+path, os.O_WRONLY|os.O_CREATE, 0666)
 	check(err)
 	defer f.Close()
+	//TODO bug cuando subes un fichero de un bloque con un contenido, y subes otro con el mismo nombre pero distinto contenido se quedan guardados los dos en el servidor (cuando solo tendria que quedarse guardado el segundo)
 	io.Copy(f, file)
 	position.Block = path
 	position.Position = r.FormValue("Parte")
@@ -455,6 +456,18 @@ func registrarFileUsuario(usuario string, fichero string, bloque BlockPosition) 
 			bloquesDeArchivo = nuevosBloquesDeArchivo
 		} else {
 			bloquesDeArchivo = append(bloquesDeArchivo, bloque)
+		}
+
+		posicionBloque, err := strconv.Atoi(bloque.Position)
+		check(err)
+		if posicionBloque+1 < len(bloquesDeArchivo) {
+			fmt.Println("entro")
+			jsonBytes = leerJSON(rutaBlocksBD)
+			var blocks Blocks
+			json.Unmarshal(jsonBytes, &blocks)
+			eliminarBloquesUsuario(bloquesDeArchivo[posicionBloque+1:], usuario, &files, &blocks)
+
+			bloquesDeArchivo = bloquesDeArchivo[:posicionBloque+1]
 		}
 		files.Files[count].Order = bloquesDeArchivo
 		guardarJSON(rutaFilesBD, &files)
@@ -541,31 +554,7 @@ func handlerDeleteFile(w http.ResponseWriter, r *http.Request) {
 		var blocks Blocks
 		json.Unmarshal(jsonBytes, &blocks)
 
-		for i := 0; i < len(bloquesDeArchivo); i++ {
-			var bloqueCambiado = false
-			for j := 0; j < len(files.Files); j++ {
-				for k := 0; k < len(files.Files[j].Order) && !bloqueCambiado; k++ {
-					if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block {
-						otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block, &files)
-						if !otroUsuarioTiene {
-							if !isBlockUsed(userSolicitante, bloquesDeArchivo[i].Block, &files) {
-								deleteFile(rutaArchivos + bloquesDeArchivo[i].Block)
-								eliminarBloque(bloquesDeArchivo[i].Block, &blocks)
-							}
-						} else {
-							claveOriginal, nuevaClave, err := obtenerClavesUsuarios(bloquesDeArchivo[i].Block, otroUsuarioBloque)
-							check(err)
-
-							asignarNuevaClave(rutaArchivos+bloquesDeArchivo[i].Block, claveOriginal, nuevaClave)
-
-							blocks.Blocks[getPosicionBloque(bloquesDeArchivo[i].Block, &blocks)].User = otroUsuarioBloque
-						}
-						bloqueCambiado = true
-					}
-				}
-			}
-		}
-		guardarJSON(rutaBlocksBD, &blocks)
+		eliminarBloquesUsuario(bloquesDeArchivo, userSolicitante, &files, &blocks)
 		eliminarArchivoUsuario(userSolicitante, archivoSolicitado, &files)
 		response(w, true, "Borrado")
 	}
@@ -595,6 +584,34 @@ func getPosicionBloque(bloque string, blocks *Blocks) int {
 		}
 	}
 	return 0
+}
+
+func eliminarBloquesUsuario(bloquesDeArchivo []BlockPosition, userSolicitante string, files *Files, blocks *Blocks) {
+	for i := 0; i < len(bloquesDeArchivo); i++ {
+		var bloqueCambiado = false
+		for j := 0; j < len(files.Files); j++ {
+			for k := 0; k < len(files.Files[j].Order) && !bloqueCambiado; k++ {
+				if bloquesDeArchivo[i].Block == files.Files[j].Order[k].Block {
+					otroUsuarioBloque, otroUsuarioTiene := checkUsersBlocks(userSolicitante, bloquesDeArchivo[i].Block, files)
+					if !otroUsuarioTiene {
+						if !isBlockUsed(userSolicitante, bloquesDeArchivo[i].Block, files) {
+							deleteFile(rutaArchivos + bloquesDeArchivo[i].Block)
+							eliminarBloque(bloquesDeArchivo[i].Block, blocks)
+						}
+					} else {
+						claveOriginal, nuevaClave, err := obtenerClavesUsuarios(bloquesDeArchivo[i].Block, otroUsuarioBloque)
+						check(err)
+
+						asignarNuevaClave(rutaArchivos+bloquesDeArchivo[i].Block, claveOriginal, nuevaClave)
+
+						blocks.Blocks[getPosicionBloque(bloquesDeArchivo[i].Block, blocks)].User = otroUsuarioBloque
+					}
+					bloqueCambiado = true
+				}
+			}
+		}
+	}
+	guardarJSON(rutaBlocksBD, &blocks)
 }
 
 func eliminarArchivoUsuario(usuario string, archivo string, files *Files) bool {
@@ -933,9 +950,9 @@ func middlewareAuth(next http.Handler) http.Handler {
 
 func main() {
 	//Archivo log
-	f, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := os.OpenFile(rutaLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("error opening file: %v", err)
+		log.Fatalf("Error abriendo el fichero: %v", err)
 	}
 	defer f.Close()
 

@@ -102,9 +102,8 @@ func decodeURLB64(cadena string) string {
 	return string(decode[:])
 }
 
-const randomStringLetters = "0123abcdefghijklmnopqrstuvwxyz456ABCDEFGHIJKLMNOPQRSTUVWXYZ789"
-
 func randomString(n int) string {
+	const randomStringLetters = "0123abcdefghijklmnopqrstuvwxyz456ABCDEFGHIJKLMNOPQRSTUVWXYZ789"
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = randomStringLetters[mathrand.Intn(len(randomStringLetters))]
