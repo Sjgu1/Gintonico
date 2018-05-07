@@ -66,14 +66,13 @@ func streamToString(stream io.Reader) string {
 
 func createFile(path string) {
 	// detect if file exists
-	var _, err = os.Stat(path)
+	//var _, err = os.Stat(path)
 
 	// create file if not exists
-	if os.IsNotExist(err) {
-		var file, err = os.Create(path)
-		check(err)
-		defer file.Close()
-	}
+	var file, err = os.Create(path)
+	check(err)
+	defer file.Close()
+
 }
 
 func writeFile(path string, content string) {
@@ -91,7 +90,7 @@ func writeFile(path string, content string) {
 
 func createDirIfNotExist(dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0666)
+		err = os.MkdirAll(dir, 0766)
 		if err != nil {
 			panic(err)
 		}
