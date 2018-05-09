@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -8,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,7 +26,7 @@ import (
 // función para comprobar errores (ahorra escritura)
 func check(e error) {
 	if e != nil {
-		log.Println(e.Error())
+		fmt.Println(e.Error())
 	}
 }
 
@@ -50,19 +52,13 @@ func createJWTUser(username string) string {
 	return tokenstring
 }
 
-func validarTokenUser(tokenRecibido string, username string, users *Users) bool {
+func validarTokenUser(tokenRecibido string, username string) bool {
 	clavemaestra, err := getTokenKey(rutaMasterKey)
 	check(err)
 	token, err := jwt.Parse(tokenRecibido, func(token *jwt.Token) (interface{}, error) {
 		return []byte(clavemaestra), nil
 	})
-	//check(err)
 
-	/*if claims["exp"].(float64) < float64(time.Now().Unix()) {
-		//Aqui habria que deolver que el token ha expirado
-		//fmt.Println(false)
-		return false
-	}*/
 	if err != nil || token == nil { //ya valida tanto el tiempo de expiracion como si se ha firmado bien etc
 		log.Println("Token incorrecto")
 		return false
@@ -114,7 +110,7 @@ func randomString(n int) string {
 //Comprueba que los directorios no existen
 func createDirIfNotExist(dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0755)
+		err = os.MkdirAll(dir, 0766)
 		if err != nil {
 			panic(err)
 		}
@@ -122,66 +118,39 @@ func createDirIfNotExist(dir string) {
 }
 
 func decryptAESCFB(data []byte, keystring string) []byte {
-	// Byte array of the string
 	ciphertext := data
-	// Key
 	key := []byte(keystring)
 
-	// Create the AES cipher
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(errors.New("La contraseña en AES tiene que ser exactamente de 16, 24, o 32 bytes"))
 	}
-
-	// Before even testing the decryption,
-	// if the text is too small, then it is incorrect
 	if len(ciphertext) < aes.BlockSize {
-		panic(errors.New("El texto a cifrar tiene que tener al menos 16 bytes"))
+		panic(errors.New("El texto a descifrar tiene que tener al menos 16 bytes"))
 	}
 
-	// Get the 16 byte IV
 	iv := ciphertext[:aes.BlockSize]
-
-	// Remove the IV from the ciphertext
 	ciphertext = ciphertext[aes.BlockSize:]
-
-	// Return a decrypted stream
 	stream := cipher.NewCFBDecrypter(block, iv)
-
-	// Decrypt bytes from ciphertext
 	stream.XORKeyStream(ciphertext, ciphertext)
+
 	return ciphertext
 }
 
 func encryptAESCFB(data []byte, keystring string) []byte {
-	// Byte array of the string
 	plaintext := data
-
-	// Key
 	key := []byte(keystring)
-
-	// Create the AES cipher
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(errors.New("La contraseña en AES tiene que ser exactamente de 16, 24, o 32 bytes"))
 	}
-
-	// Empty array of 16 + plaintext length
-	// Include the IV at the beginning
 	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-
-	// Slice of first 16 bytes
 	iv := ciphertext[:aes.BlockSize]
 
-	// Write 16 rand bytes to fill iv
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		panic(errors.New("El texto a descifrar tiene que tener al menos 16 bytes"))
 	}
-
-	// Return an encrypted stream
 	stream := cipher.NewCFBEncrypter(block, iv)
-
-	// Encrypt bytes from plaintext to ciphertext
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
 	return ciphertext
@@ -193,39 +162,48 @@ func hashSHA512(datos []byte) [64]byte {
 
 func deleteFile(path string) {
 	os.Remove(path)
-	//check(err)
 }
 
-func leerJSON(jsonNamefile string) []byte {
+func getUser(user string) int {
+	for i := 0; i < len(users.Users); i++ {
+		if users.Users[i].User == user {
+			return i
+		}
+	}
+	return -1
+}
+
+func leerArchivo(ruta string) []byte {
 	// Abre el archivo json
-	jsonFile, err := os.Open(jsonNamefile)
+	archivo, err := os.Open(ruta)
 	// if we os.Open returns an error then handle it
 	if err != nil {
 		//fmt.Println(err)
 		// detect if file exists
-		var _, err = os.Stat(jsonNamefile)
+		var _, err = os.Stat(ruta)
 
 		// create file if not exists
 		if os.IsNotExist(err) {
-			var file, err = os.Create(jsonNamefile)
+			var file, err = os.Create(ruta)
 			check(err)
 			defer file.Close()
 		}
 
-		log.Println("Se ha creado correctamente el fichero: ", jsonNamefile)
+		log.Println("Se ha creado correctamente el fichero: ", ruta)
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
-	defer jsonFile.Close()
+	defer archivo.Close()
 
 	// read our opened xmlFile as a byte array.
-	byteValue, _ := ioutil.ReadAll(jsonFile)
+	byteValue, _ := ioutil.ReadAll(archivo)
 	return byteValue
 }
 
-func guardarJSON(ruta string, any interface{}) {
-	varJSON, _ := json.Marshal(any)
-	err := ioutil.WriteFile(ruta, varJSON, 0666)
+func escribirArchivo(ruta string, content []byte) {
+	f, err := os.OpenFile(ruta, os.O_WRONLY|os.O_CREATE, 0766)
+	defer f.Close()
 	check(err)
+	io.Copy(f, bytes.NewReader(content))
 }
 
 //PasswordStruct struct para passwords
@@ -236,7 +214,7 @@ type PasswordStruct struct {
 }
 
 func getMasterKey(path string) (string, error) {
-	jsonBytes := leerJSON(path)
+	jsonBytes := leerArchivo(path)
 	var password PasswordStruct
 	err := json.Unmarshal(jsonBytes, &password)
 	check(err)
@@ -247,7 +225,7 @@ func getMasterKey(path string) (string, error) {
 }
 
 func getEmailKey(path string) (string, error) {
-	jsonBytes := leerJSON(path)
+	jsonBytes := leerArchivo(path)
 	var password PasswordStruct
 	err := json.Unmarshal(jsonBytes, &password)
 	check(err)
@@ -258,7 +236,7 @@ func getEmailKey(path string) (string, error) {
 }
 
 func getTokenKey(path string) (string, error) {
-	jsonBytes := leerJSON(path)
+	jsonBytes := leerArchivo(path)
 	var password PasswordStruct
 	err := json.Unmarshal(jsonBytes, &password)
 	check(err)
@@ -282,7 +260,7 @@ func sendEmail(codigo string, destinatario string) {
 		from, []string{to}, []byte(msg))
 
 	if err != nil {
-		log.Printf("smtp error: %s", err)
+		log.Printf("Error smtp gmail: %s", err)
 		return
 	}
 	log.Println("Email enviado a: " + destinatario)
