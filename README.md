@@ -1,6 +1,6 @@
-<p align="center"><img src="/cliente/assets/img/logo_redondeado.png" width="350"></img></p>
+<p align="center"><img src="/cliente/assets/img/logo_redondeado.png" width="400"></img></p>
 
-# Gintónico <img src="https://travis-ci.org/golang/dep.svg?branch=master" alt="Build Status"></img> <img src="https://img.shields.io/badge/license-GPL%20v3-blue.svg" alt="License"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Windows%20-%20OK&failingText=Windows%20-%20failed&pendingText=Windows%20-%20pending" alt="Windows Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=MacOS%20-%20OK&failingText=MacOS%20-%20failed&pendingText=MacOS%20-%20pending" alt="MacOS Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Linux%20-%20OK&failingText=Linux%20-%20failed&pendingText=Linux%20-%20pending" alt="Linux Build Status"></img>
+# Gintónico &nbsp; <img src="https://travis-ci.org/golang/dep.svg?branch=master" alt="Build Status"></img> <img src="https://img.shields.io/badge/license-GPL%20v3-blue.svg" alt="License"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Windows%20-%20OK&failingText=Windows%20-%20failed&pendingText=Windows%20-%20pending" alt="Windows Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=MacOS%20-%20OK&failingText=MacOS%20-%20failed&pendingText=MacOS%20-%20pending" alt="MacOS Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Linux%20-%20OK&failingText=Linux%20-%20failed&pendingText=Linux%20-%20pending" alt="Linux Build Status"></img>
 
 Gintónico es un sistema de alojamiento de archivos en la nube (Arquitectura cliente/servidor). Está implementado con una de las mejores prácticas de seguridad en la actualidad. Esta disponible para Windows, MacOS y Linux, y el cliente dispone de una interfaz gráfica usable, simple y eficiente.
 
@@ -53,7 +53,7 @@ MacOS:
 Por último, para poner en funcionamiento el servidor, solo habrá que iniciar el ejecutable que se habrá generado al ejecutar el comando go build anteriormente.
 
 A continuación se muestra una pequeña y rápida demo:
-<p align="center"><img src="/cliente/assets/img/gif.gif" width="460"></img></p>
+<p align="center"><img src="/cliente/assets/img/gif.gif" width="750"></img></p>
 
 ## Librerías
 
