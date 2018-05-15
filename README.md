@@ -1,6 +1,6 @@
-# <p align="center"><img src="/cliente/assets/img/logo_alargado2.png" style="border-radius: 10px; width:370px;"></img></p>
+<p align="center"><img src="/cliente/assets/img/logo_redondeado.png" width="350"></img></p>
 
-<p align="center"><img src="https://travis-ci.org/golang/dep.svg?branch=master" alt="Build Status"></img> <img src="https://img.shields.io/badge/license-GPL%20v3-blue.svg" alt="License"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Windows%20-%20OK&failingText=Windows%20-%20failed&pendingText=Windows%20-%20pending" alt="Windows Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=MacOS%20-%20OK&failingText=MacOS%20-%20failed&pendingText=MacOS%20-%20pending" alt="MacOS Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Linux%20-%20OK&failingText=Linux%20-%20failed&pendingText=Linux%20-%20pending" alt="Linux Build Status"></img></p>
+# Gintónico <img src="https://travis-ci.org/golang/dep.svg?branch=master" alt="Build Status"></img> <img src="https://img.shields.io/badge/license-GPL%20v3-blue.svg" alt="License"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Windows%20-%20OK&failingText=Windows%20-%20failed&pendingText=Windows%20-%20pending" alt="Windows Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=MacOS%20-%20OK&failingText=MacOS%20-%20failed&pendingText=MacOS%20-%20pending" alt="MacOS Build Status"></img> <img src="https://ci.appveyor.com/api/projects/status/github/golang/dep?svg=true&branch=master&passingText=Linux%20-%20OK&failingText=Linux%20-%20failed&pendingText=Linux%20-%20pending" alt="Linux Build Status"></img>
 
 Gintónico es un sistema de alojamiento de archivos en la nube (Arquitectura cliente/servidor). Está implementado con una de las mejores prácticas de seguridad en la actualidad. Esta disponible para Windows, MacOS y Linux, y el cliente dispone de una interfaz gráfica usable, simple y eficiente.
 
@@ -10,7 +10,7 @@ Gintónico es un sistema de alojamiento de archivos en la nube (Arquitectura cli
 
 Siga estas instrucciones para obtener una copia de este proyecto funcionando correctamente en tu sistema operativo.
 
-### Prerrequisitos <img align="right" width="210" src="/cliente/assets/img/golang_gintonico.png"></img> 
+### Prerrequisitos <img align="right" width="200" src="/cliente/assets/img/golang_gintonico.png"></img> 
 Para empezar es necesario que tanto el lenguaje (Golang) esté bien instalado como los paths bien configurados (Depende de cada sistema operativo). 
 
 Una vez dispongamos de los medios para poder compilar y ejecutar Go necesitaremos descargarnos las librerías que se usan en el proyecto:
@@ -53,7 +53,7 @@ MacOS:
 Por último, para poner en funcionamiento el servidor, solo habrá que iniciar el ejecutable que se habrá generado al ejecutar el comando go build anteriormente.
 
 A continuación se muestra una pequeña y rápida demo:
-<p align="center"><img src="/cliente/assets/img/gif.gif" style="width:90%; border:1px solid darkblue;"></img></p>
+<p align="center"><img src="/cliente/assets/img/gif.gif" width="460"></img></p>
 
 ## Librerías
 
