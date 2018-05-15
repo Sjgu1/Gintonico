@@ -86,7 +86,8 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 	if usuario != "" && pass != "" {
 		data := url.Values{} // estructura para contener los valores
 		data.Set("login", usuario)
-		data.Set("password", encriptarScrypt(pass, usuario))
+		pashHashed := string(hashSHA512([]byte(pass)))
+		data.Set("password", pashHashed)
 
 		bytesJSON, err := json.Marshal(data)
 		check(err)
@@ -105,7 +106,7 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 		if err == nil && respuesta.Ok == true {
 			if respuesta.Msg == "Doble factor" {
 				login = usuario
-				password = encriptarScrypt(pass, usuario)
+				password = pashHashed
 				goDobleFactor(nil, nil)
 			} else {
 				login = usuario
@@ -129,8 +130,8 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 			data := url.Values{} // estructura para contener los valores
 			data.Set("register", usuario)
 			data.Set("email", email)
-			data.Set("password", encriptarScrypt(pass, usuario))
-			data.Set("confirm", encriptarScrypt(confirm, usuario))
+			data.Set("password", string(hashSHA512([]byte(pass))))
+			data.Set("confirm", string(hashSHA512([]byte(confirm))))
 
 			bytesJSON, err := json.Marshal(data)
 			check(err)
@@ -200,7 +201,7 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 	hash := hashSHA512(parte)
 	size := strconv.Itoa(tam)
 	data.Set("cont", contador)
-	data.Set("hash", hex.EncodeToString(hash[:]))
+	data.Set("hash", hex.EncodeToString(hash))
 	data.Set("size", size)
 	data.Set("user", login)
 	data.Set("filename", filename)
@@ -209,7 +210,7 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 	check(err)
 	reader := bytes.NewReader(bytesJSON)
 
-	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash[:]) + " size: " + size + " user: " + login + " filename: " + filename
+	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash) + " size: " + size + " user: " + login + " filename: " + filename
 	body.Find("texto1").SetText(imprimir)
 
 	/**************************** conseguir usuario *************************/
@@ -226,7 +227,7 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 		goLogin(nil, nil)
 		//mostrar error y si es posible que esta funcion devuelva un error y el bucle de arriba pare
 	} else if respuesta.Ok == false && respuesta.Msg == "Hash comprobado" { //el hash no existe en el servidor (la parte no se ha subido nunca)
-		enviarDatos(parte, filename, contador, hex.EncodeToString(hash[:]), size)
+		enviarDatos(parte, filename, contador, hex.EncodeToString(hash), size)
 	}
 }
 
@@ -365,7 +366,7 @@ func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
 		data.Set("user", login)
 		data.Set("password", password)
 		hash := hashSHA512([]byte(codigo))
-		codigoHashed := hex.EncodeToString(hash[:])
+		codigoHashed := hex.EncodeToString(hash)
 		data.Set("codigo", codigoHashed)
 
 		bytesJSON, err := json.Marshal(data)

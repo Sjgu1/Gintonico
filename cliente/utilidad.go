@@ -9,8 +9,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-
-	"golang.org/x/crypto/scrypt"
 )
 
 // función para comprobar errores (ahorra escritura)
@@ -36,15 +34,6 @@ func sendServerPetition(method string, datos io.Reader, route string, contentTyp
 	return r
 }
 
-// Devuelve el string de la cadena encriptada
-func encriptarScrypt(cadena string, salt string) string {
-	saltBytes := []byte(salt)
-
-	dk, err := scrypt.Key([]byte(cadena), saltBytes, 1<<15, 10, 1, 32)
-	check(err)
-	return base64.StdEncoding.EncodeToString(dk)
-}
-
 func encodeURLB64(cadena string) string {
 	return base64.URLEncoding.EncodeToString([]byte(cadena))
 }
@@ -54,8 +43,9 @@ func decodeURLB64(cadena string) string {
 	return string(decode[:])
 }
 
-func hashSHA512(datos []byte) [64]byte {
-	return sha512.Sum512(datos)
+func hashSHA512(datos []byte) []byte {
+	hash := sha512.Sum512(datos)
+	return hash[:]
 }
 
 func streamToString(stream io.Reader) string {

@@ -41,7 +41,8 @@ function setPage(html) {
                 "type": 'file-size',
                 "targets": "sizeColumn"
             }],
-            "order": [[ 0, "asc" ]]
+            "order": [[ 0, "asc" ]],
+            "lengthMenu": [ [10, 25, -1], [10, 25, "Todos"] ]
         })
     } catch (err) {
 
