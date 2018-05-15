@@ -2,16 +2,13 @@ package main
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"io"
 	"mime/multipart"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/dtylman/gowd"
 	"github.com/dtylman/gowd/bootstrap"
@@ -20,6 +17,8 @@ import (
 var body *gowd.Element
 var mostrar = "login"
 var login = ""
+var token = ""
+var password = ""
 
 type resp struct {
 	Ok  bool   `json:"ok"`  // true -> correcto, false -> error
@@ -27,32 +26,52 @@ type resp struct {
 }
 
 func main() {
-	body = bootstrap.NewContainer(false)
-	//body.SetAttribute("style", "background-color:#FF654E")
-
-	logo := `<div style="margin:0 auto;width:40%;"><img src="img/logo_alargado.png" style="width:100%;margin:0 auto"/></div><br/><br/>`
+	body = bootstrap.NewElement("div", "wrapper")
+	logo := `<div style="margin:0 auto;width:30%;"><img src="assets/img/logo_alargado.png" style="width:100%;margin:0 auto"/></div>`
 
 	switch mostrar {
 	case "login":
+		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
 		body.AddHTML(logo, nil)
 		body.AddHTML(vistaLogin(), nil)
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendLogin)
-		body.Find("register-form-link").OnEvent(gowd.OnClick, actualizarVista)
-		cambiarVista("register")
+		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
+		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
 		break
 	case "register":
+		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
 		body.AddHTML(logo, nil)
 		body.AddHTML(vistaRegister(), nil)
 		body.Find("register-submit").OnEvent(gowd.OnClick, sendRegister)
-		body.Find("login-form-link").OnEvent(gowd.OnClick, actualizarVista)
-		cambiarVista("login")
+		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
+		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
 		break
 	case "principal":
+		body.SetAttribute("style", "background-color:#ecf0f5; height: 100%")
 		body.AddHTML(vistaPrincipal(), nil)
+		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
 		body.Find("buttonEnviar").OnEvent(gowd.OnClick, seleccionarFichero)
-		body.Find("logout-link").OnEvent(gowd.OnClick, actualizarVista)
+		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
-		cambiarVista("login")
+		body.Find("buttonEliminar").OnEvent(gowd.OnClick, eliminarFichero)
+		body.Find("ajustes").OnEvent(gowd.OnClick, goAjustes)
+		break
+	case "doblefactor":
+		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
+		body.AddHTML(logo, nil)
+		body.AddHTML(vistaFactor(), nil)
+		body.Find("login-submit").OnEvent(gowd.OnClick, sendDobleFactor)
+		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
+		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
+		break
+	case "ajustes":
+		body.SetAttribute("style", "background-color:#ecf0f5; height: 100%")
+		body.AddHTML(vistaAjustes(), nil)
+		body.Find("ajustes-submit").OnEvent(gowd.OnClick, sendAjustes)
+		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
+		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
+		body.Find("ajustes").OnEvent(gowd.OnClick, goAjustes)
+		actualizarAjustes()
 		break
 	}
 	//start the ui loop
@@ -60,70 +79,88 @@ func main() {
 	check(err)
 }
 
-func actualizarVista(sender *gowd.Element, event *gowd.EventElement) { //por si necesitamos hacer algo especial a la hora de actualizar
-	main()
-}
-
-func cambiarVista(vista string) {
-	mostrar = vista
-}
-
 func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
-	// ** ejemplo de login
-	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("usuario").GetValue()
 	pass := body.Find("contraseña").GetValue()
-	data.Set("login", usuario)
-	data.Set("password", encriptarScrypt(pass, usuario))
 
-	response := sendServerPetition(data, "/login")
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(response.Body)
+	if usuario != "" && pass != "" {
+		data := url.Values{} // estructura para contener los valores
+		data.Set("login", usuario)
+		pashHashed := string(hashSHA512([]byte(pass)))
+		data.Set("password", pashHashed)
 
-	var respuesta resp
-	err := json.Unmarshal(buf.Bytes(), &respuesta)
-	check(err)
+		bytesJSON, err := json.Marshal(data)
+		check(err)
+		reader := bytes.NewReader(bytesJSON)
 
-	if respuesta.Ok == true {
-		login = usuario
-		cambiarVista("principal")
-		actualizarVista(nil, nil)
+		response := sendServerPetition("POST", reader, "/login", "application/json")
+		defer response.Body.Close()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(response.Body)
+
+		var respuesta resp
+		err = json.Unmarshal(buf.Bytes(), &respuesta)
+		check(err)
+
+		body.Find("texto").SetText(buf.String())
+		if err == nil && respuesta.Ok == true {
+			if respuesta.Msg == "Doble factor" {
+				login = usuario
+				password = pashHashed
+				goDobleFactor(nil, nil)
+			} else {
+				login = usuario
+				token = response.Header.Get("Token")
+				goPrincipal(nil, nil)
+			}
+		}
+	} else {
+		body.Find("texto").SetText("Faltan datos por rellenar")
 	}
 }
 
 func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
-	// ** ejemplo de registro
-	data := url.Values{} // estructura para contener los valores
 	usuario := body.Find("registerUser").GetValue()
+	email := body.Find("registerEmail").GetValue()
 	pass := body.Find("registerPassword").GetValue()
 	confirm := body.Find("confirmPassword").GetValue()
-	data.Set("register", usuario)
-	data.Set("password", encriptarScrypt(pass, usuario))
-	data.Set("confirm", encriptarScrypt(confirm, usuario))
 
-	response := sendServerPetition(data, "/register")
+	if usuario != "" && email != "" && pass != "" && confirm != "" {
+		if pass == confirm {
+			data := url.Values{} // estructura para contener los valores
+			data.Set("register", usuario)
+			data.Set("email", email)
+			data.Set("password", string(hashSHA512([]byte(pass))))
+			data.Set("confirm", string(hashSHA512([]byte(confirm))))
 
-	//io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(response.Body)
-	s := buf.String()
-	body.Find("texto").SetText(s)
-	body.Find("login-form-link").RemoveAttribute("active")
-	body.Find("register-form-link").SetClass("active")
+			bytesJSON, err := json.Marshal(data)
+			check(err)
+			reader := bytes.NewReader(bytesJSON)
+
+			response := sendServerPetition("POST", reader, "/register", "application/json")
+			defer response.Body.Close()
+
+			s := streamToString(response.Body)
+			body.Find("texto").SetText(s)
+			body.Find("login-form-link").RemoveAttribute("active")
+			body.Find("register-form-link").SetClass("active")
+		} else {
+			body.Find("texto").SetText("Las contraseñas no coinciden")
+		}
+	} else {
+		body.Find("texto").SetText("Faltan datos por rellenar")
+	}
 }
 
 func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	//fmt.Println(body.Find("archivo").GetValue())
-
 	ruta := body.Find("route").GetValue()
 	filename := body.Find("filename").GetValue()
 	enviarFichero(ruta, encodeURLB64(filename))
-	cambiarVista("principal")
-	actualizarVista(nil, nil)
+	goPrincipal(nil, nil)
 }
 
 func enviarFichero(ruta string, filename string) {
-	checkHashURL := "/checkhash"
 	f, err := os.Open(ruta)
 	check(err)
 	defer f.Close()
@@ -139,7 +176,7 @@ func enviarFichero(ruta string, filename string) {
 	contador := 0
 	contadorBytes := bytesLeidos
 	texto := strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
-	enviarParteFichero(contador, bytes, bytesLeidos, checkHashURL, filename)
+	enviarParteFichero(contador, bytes, bytesLeidos, filename)
 
 	for bytesLeidos > 0 {
 		bytesLeidos, err = f.ReadAt(bytes, int64(contadorBytes))
@@ -151,44 +188,50 @@ func enviarFichero(ruta string, filename string) {
 				bytes = bytes[:bytesLeidos] // para que no ocupe 4mb siempre
 			}
 			texto += strconv.Itoa(contador) + ": " + strconv.Itoa(bytesLeidos) + ", "
-			enviarParteFichero(contador, bytes, bytesLeidos, checkHashURL, filename)
+			enviarParteFichero(contador, bytes, bytesLeidos, filename)
 		}
 	}
-
 	body.Find("texto").SetText(texto)
 }
 
-func enviarParteFichero(cont int, parte []byte, tam int, checkHashURL string, filename string) {
+func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 	//preparar peticion
-	//hash := hashSHA256(data)
 	data := url.Values{} // estructura para contener los valores
 	contador := strconv.Itoa(cont)
-	hash := hashSHA256(parte)
+	hash := hashSHA512(parte)
 	size := strconv.Itoa(tam)
 	data.Set("cont", contador)
-	data.Set("hash", hex.EncodeToString(hash[:]))
+	data.Set("hash", hex.EncodeToString(hash))
 	data.Set("size", size)
 	data.Set("user", login)
 	data.Set("filename", filename)
 
-	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash[:]) + " size: " + size + " user: " + login + " filename: " + filename
+	bytesJSON, err := json.Marshal(data)
+	check(err)
+	reader := bytes.NewReader(bytesJSON)
+
+	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash) + " size: " + size + " user: " + login + " filename: " + filename
 	body.Find("texto1").SetText(imprimir)
 
-	response := sendServerPetition(data, checkHashURL)
+	/**************************** conseguir usuario *************************/
+	response := sendServerPetition("POST", reader, "/checkhash", "application/json")
+	defer response.Body.Close()
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
 
 	var respuesta resp
-	err := json.Unmarshal(buf.Bytes(), &respuesta)
+	err = json.Unmarshal(buf.Bytes(), &respuesta)
 	check(err)
 
-	if respuesta.Ok == false { //el hash no existe en el servidor (la parte no se ha subido nunca)
-		enviarDatos(parte, filename, contador, hex.EncodeToString(hash[:]))
+	if err != nil || (respuesta.Ok == false && respuesta.Msg != "Hash comprobado") {
+		goLogin(nil, nil)
+		//mostrar error y si es posible que esta funcion devuelva un error y el bucle de arriba pare
+	} else if respuesta.Ok == false && respuesta.Msg == "Hash comprobado" { //el hash no existe en el servidor (la parte no se ha subido nunca)
+		enviarDatos(parte, filename, contador, hex.EncodeToString(hash), size)
 	}
 }
 
-func enviarDatos(data []byte, filename string, parte string, hash string) {
-	targetURL := "https://localhost:8081/upload"
+func enviarDatos(data []byte, filename string, parte string, hash string, size string) {
 	bodyBuf := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(bodyBuf)
 	err := bodyWriter.WriteField("Username", login)
@@ -197,13 +240,13 @@ func enviarDatos(data []byte, filename string, parte string, hash string) {
 	check(err)
 	err = bodyWriter.WriteField("Hash", hash)
 	check(err)
+	err = bodyWriter.WriteField("Size", size)
+	check(err)
 
 	// this step is very important
 	fileWriter, err := bodyWriter.CreateFormFile("uploadfile", filename)
 	check(err)
 
-	//iocopy
-	//fh, err := os.Open(ruta) ya no, ahora son bytes[]
 	r := bytes.NewReader(data)
 	_, err = io.Copy(fileWriter, r)
 	check(err)
@@ -211,75 +254,238 @@ func enviarDatos(data []byte, filename string, parte string, hash string) {
 	contentType := bodyWriter.FormDataContentType()
 	bodyWriter.Close()
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-	resp, err := client.Post(targetURL, contentType, bodyBuf)
-	check(err)
-
-	defer resp.Body.Close()
-	/*respBody, err := ioutil.ReadAll(resp.Body)
-	check(err)*/
+	sendServerPetition("POST", bodyBuf, "/upload", contentType)
 }
 
 func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
-
 	filename := encodeURLB64(body.Find("archivoPedido").GetValue())
-
-	response, err := client.Post("https://localhost:8081/user/"+login+"/file/"+filename, "application/json", nil) // Pedimos Por get
-	check(err)
-
+	response := sendServerPetition("GET", nil, "/user/"+login+"/file/"+filename, "application/json")
 	defer response.Body.Close()
-	//	contents, err := ioutil.ReadAll(response.Body)
-	//	check(err)
+
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
-	newStr := buf.String()
-	//fmt.Printf("%s\n", string(contents))
-	createDirIfNotExist("./descargas/")
-	createFile("./descargas/" + body.Find("archivoPedido").GetValue())
-	writeFile("./descargas/"+body.Find("archivoPedido").GetValue(), newStr)
-
-	body.Find("texto").SetText(body.Find("archivoPedido").GetValue())
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		goLogin(nil, nil)
+		body.Find("texto").SetText(respuestaJSON.Msg)
+	} else {
+		respuesta := buf.String()
+		//fmt.Printf("%s\n", string(contents))
+		createDirIfNotExist("./descargas/" + login)
+		createFile("./descargas/" + login + "/" + body.Find("archivoPedido").GetValue())
+		writeFile("./descargas/"+login+"/"+body.Find("archivoPedido").GetValue(), respuesta)
+		body.Find("texto").SetText("Fichero en descargas: " + body.Find("archivoPedido").GetValue())
+	}
 }
 
 func peticionNombreFicheros() string {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	response := sendServerPetition("GET", nil, "/user/"+login+"/files", "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	respuesta := ""
-	if login != "" {
-		r, err := client.Get("https://localhost:8081/user/" + login) // Pedimos Por get
+
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		//return respuestaJSON.Msg
+		//goLogin(nil, nil)
+		return respuesta
+	}
+
+	type FilesJSON struct {
+		Filename []string `json:"filename"`
+		Size     []string `json:"size"`
+	}
+	var filesJSON FilesJSON
+	err = json.Unmarshal(buf.Bytes(), &filesJSON)
+	if err == nil && len(filesJSON.Filename) != 0 && len(filesJSON.Size) != 0 && len(filesJSON.Filename) == len(filesJSON.Size) {
+		for i := range filesJSON.Filename {
+			//respuesta += filesJSON.Filename[i] + filesJSON.Size[i]
+			/*<div class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
+				<ul class="dropdown-menu dropdown-menu-files" style="background-color: #53A3CD;">
+					<li><a href="#" onclick="seleccionarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">Descargar</a></li>
+					<li><a href="#" onclick="eliminarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">Eliminar</a></li>
+				</ul>
+			</div>*/
+			tamanyo, _ := strconv.Atoi(filesJSON.Size[i])
+			respuesta += `<tr>
+				<td>
+					<a href="#">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
+					<span style="float:right;">&nbsp;</span>
+					<span style="float:right;">&nbsp;</span>
+					<button type="button" class="btn btn-danger btn-xs" style="float: right;" onclick="eliminarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">
+						<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+					</button>
+					<span style="float:right;">&nbsp;</span>
+					<span style="float:right;">&nbsp;</span>
+					<button type="button" class="btn btn-primary btn-xs" style="float: right;" onclick="seleccionarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">
+						<span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
+					</button>
+					<span style="float:right;">&nbsp;</span>
+					<span style="float:right;">&nbsp;</span>
+				</td>
+				<td>
+					` + formatBytesToString(tamanyo) + `
+				</td>
+			</tr>`
+		}
+	}
+	return respuesta
+}
+
+func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
+	filename := encodeURLB64(body.Find("archivoEliminar").GetValue())
+	body.Find("texto").SetText("Eliminando: " + decodeURLB64(filename))
+	response := sendServerPetition("DELETE", nil, "/user/"+login+"/file/"+filename, "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		goLogin(nil, nil)
+		body.Find("texto").SetText(respuestaJSON.Msg)
+	} else {
+		goPrincipal(nil, nil)
+	}
+}
+
+func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
+	codigo := body.Find("codigo").GetValue()
+
+	if codigo != "" {
+		data := url.Values{} // estructura para contener los valores
+		data.Set("user", login)
+		data.Set("password", password)
+		hash := hashSHA512([]byte(codigo))
+		codigoHashed := hex.EncodeToString(hash)
+		data.Set("codigo", codigoHashed)
+
+		bytesJSON, err := json.Marshal(data)
+		check(err)
+		reader := bytes.NewReader(bytesJSON)
+
+		response := sendServerPetition("POST", reader, "/doblefactor", "application/json")
+		defer response.Body.Close()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(response.Body)
+
+		var respuesta resp
+		err = json.Unmarshal(buf.Bytes(), &respuesta)
 		check(err)
 
-		//` `
-		s := streamToString(r.Body)
-		a := strings.Split(s, "\"")
-
-		for i, n := range a {
-			if i%2 != 0 {
-				respuesta += `<div class="file-box">  
-			<div class="file">
-				<a href="#" onclick="seleccionarArchivo('` + decodeURLB64(n) + `')">
-					<span class="corner"></span>
-					<div class="icon">
-						<i class="fa fa-file"></i>
-					</div>
-					<div class="file-name">
-					` + decodeURLB64(n) + `
-						<br>
-					</div>
-				</a>
-			</div>
-		</div>`
-			}
+		body.Find("texto").SetText(buf.String())
+		if err == nil && respuesta.Ok == true {
+			token = response.Header.Get("Token")
+			goPrincipal(nil, nil)
 		}
+	} else {
+		body.Find("texto").SetText("Introduce algún código")
+	}
+}
+
+func actualizarAjustes() {
+	response := sendServerPetition("GET", nil, "/user/"+login+"/ajustes", "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		//goLogin(nil, nil)
+		body.Find("texto").SetText(respuestaJSON.Msg)
+	}
+
+	type AjustesJSON struct {
+		Email       string `json:"size"`
+		Doblefactor bool   `json:"doblefactor"`
+	}
+	var ajustesJSON AjustesJSON
+	err = json.Unmarshal(buf.Bytes(), &ajustesJSON)
+
+	if err == nil {
+		body.Find("email").SetAttribute("value", ajustesJSON.Email)
+		if ajustesJSON.Doblefactor {
+			body.Find("doblefactor").SetAttribute("checked", "checked")
+		}
+	}
+}
+
+func sendAjustes(sender *gowd.Element, event *gowd.EventElement) {
+	email, _ := body.Find("email").GetAttribute("value")
+	dobleFactor, _ := body.Find("doblefactor").GetAttribute("checked")
+	if dobleFactor != "" {
+		dobleFactor = "true"
+	} else {
+		dobleFactor = "false"
+	}
+
+	data := url.Values{} // estructura para contener los valores
+	data.Set("user", login)
+	data.Set("email", email)
+	data.Set("doblefactor", dobleFactor)
+
+	bytesJSON, err := json.Marshal(data)
+	check(err)
+	reader := bytes.NewReader(bytesJSON)
+
+	response := sendServerPetition("POST", reader, "/user/"+login+"/ajustes", "application/json")
+	defer response.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+
+	var respuesta resp
+	err = json.Unmarshal(buf.Bytes(), &respuesta)
+	check(err)
+
+	body.Find("texto").SetText(buf.String())
+	if err == nil && respuesta.Ok == true {
+		//ajustes editados correctamente
+	} else {
+		//error al editar los ajustes
+	}
+}
+
+func getInfo() string {
+	response := sendServerPetition("GET", nil, "/user/"+login+"/info", "application/json")
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(response.Body)
+	var respuestaJSON resp
+	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
+	respuesta := ""
+
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
+		//Cerrar sesion
+		//return respuestaJSON.Msg
+		//goLogin(nil, nil)
+		return respuesta
+	}
+
+	type InfoJSON struct {
+		Files     string `json:"files"`
+		TotalSize string `json:"totalsize"`
+	}
+	var infoJSON InfoJSON
+	err = json.Unmarshal(buf.Bytes(), &infoJSON)
+
+	if err == nil && infoJSON.Files != "" && infoJSON.TotalSize != "" {
+		totalBytes, err := strconv.Atoi(infoJSON.TotalSize)
+		check(err)
+		respuesta = `<span class="glyphicon glyphicon-duplicate"></span>&nbsp;&nbsp;Tienes: ` + infoJSON.Files + ` archivos. </br></br>` +
+			`<span class="glyphicon glyphicon-save"></span>&nbsp;&nbsp;Ocupan un total de: ` + formatBytesToString(totalBytes) + `. </br></br>`
 	}
 
 	return respuesta
