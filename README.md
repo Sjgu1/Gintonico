@@ -23,6 +23,7 @@ $ go get
 Ahora necesitaremos descargarnos NW.js para poder ejecutar y poner en funcionamiento la interfaz gráfica del cliente de Gintónico:
 
 > *Descargar el correspondiente a nuestro sistema operativo*
+>
 >[https://nwjs.io/downloads/](https://nwjs.io/downloads/)
 
 Una vez tengamos NW para el sistema que necesitemos, lo copiaremos dentro del cliente en una carpeta llamada "nwjs".
@@ -38,11 +39,14 @@ $ go build
 Una vez esté todo compilado, podremos ejecutar el **cliente** con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar este comando:
 
 > Windows: ```.\nwjs\nw.exe .```
+>
 > MacOS: ```./nwjs/nwjs.app/Contents/MacOS/nwjs .```
+>
 > Linux: ```./nwjs/nw .```
 
 Por último, para poner en funcionamiento el **servidor**, solo habrá que iniciar el ejecutable que se habrá generado al ejecutar el comando go build anteriormente.
 > MacOS y Linux: ```./servidor```
+>
 > Windows: ```.\servidor.exe```
 
 A continuación se muestra una pequeña y rápida demo:
