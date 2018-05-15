@@ -15,45 +15,55 @@ Para empezar es necesario que tanto el lenguaje (Golang) esté bien instalado co
 
 Una vez dispongamos de los medios para poder compilar y ejecutar Go necesitaremos descargarnos las librerías que se usan en el proyecto:
 
-*Ejecutar este comando tanto en la carpeta servidor como en el cliente*
+> *Ejecutar este comando tanto en la carpeta **servidor** como en el **cliente***.
 ```
-go get
+$ go get
 ```
 
 Ahora necesitaremos descargarnos NW.js para poder ejecutar y poner en funcionamiento la interfaz gráfica del cliente de Gintónico:
 
-*Descargar el correspondiente a nuestro sistema operativo*
-```
-https://nwjs.io/downloads/
-```
+> *Descargar el correspondiente a nuestro sistema operativo*
+>[https://nwjs.io/downloads/](https://nwjs.io/downloads/)
 
 Una vez tengamos NW para el sistema que necesitemos, lo copiaremos dentro del cliente en una carpeta llamada "nwjs".
 
 ### Instalando y ejecutando Gintónico
 
-Primero compilamos Gintónico con el comando:
-
-*Habrá que compilar el código tanto del cliente como del servidor*
+Para compilar el proyecto Gintónico necesitamos ejecutar el comando:
+> *Ejecutar este comando tanto en la carpeta **servidor** como en el **cliente***.
 ```
-go build
-```
-
-Una vez compilado el proyecto ya podremos ejecutar el cliente con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar este comando:
-
-*Desde la carpeta cliente*
-Windows:
-```
-.\nwjs\nw.exe .
-```
-MacOS:
-```
-./nwjs/nwjs.app/Contents/MacOS/nwjs .
+$ go build
 ```
 
-Por último, para poner en funcionamiento el servidor, solo habrá que iniciar el ejecutable que se habrá generado al ejecutar el comando go build anteriormente.
+Una vez esté todo compilado, podremos ejecutar el **cliente** con NW.js. Para hacer esto (suponiendo que el ejecutable de NW está dentro de una carpeta llamada nwjs), habrá que ejecutar este comando:
+
+> Windows: ```.\nwjs\nw.exe .```
+> MacOS: ```./nwjs/nwjs.app/Contents/MacOS/nwjs .```
+> Linux: ```./nwjs/nw .```
+
+Por último, para poner en funcionamiento el **servidor**, solo habrá que iniciar el ejecutable que se habrá generado al ejecutar el comando go build anteriormente.
+> MacOS y Linux: ```./servidor```
+> Windows: ```.\servidor.exe```
 
 A continuación se muestra una pequeña y rápida demo:
 <p align="center"><img src="/cliente/assets/img/gif.gif" width="750"></img></p>
+
+## Características implementadas
+
+Mínimas:
+* Arquitectura cliente servidor.
+* Almacenamiento y recuperación de ficheros (esquemas de almacenamiento).
+* Sistema de autenticación seguro.
+* Cifrado de fichero para su almacenamiento (contraseñas generadas en el servidor).
+* Lógica de aplicación mínima para su funcionamiento (crear usuarios, login, listar ficheros, subir ficheros, descargar ficheros, eliminar ficheros).
+
+Opcionales:
+* Interfaz de usuario en el cliente.
+* Esquema de almacenamiento incremental.
+* Eliminación de bloques duplicados en el servidor.
+* Comunicación entre cliente y servidor (comunicación segura, mecanismos de identificación ...).
+* Autenticación segura y fiable con doble factor de autenticación, protección de contraseñas y token de sesión.
+* Auditar/monitorizar acciones/eventos en el sistema.
 
 ## Librerías
 
