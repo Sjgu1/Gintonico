@@ -44,13 +44,26 @@ function setPage(html) {
             "order": [[ 0, "asc" ]],
             "lengthMenu": [ [10, 25, -1], [10, 25, "Todos"] ]
         })
-    } catch (err) {
+    } catch (err) {}
 
-    }
+    try{
+        $('#modalNormal').modal('show')
+        $('#modalNormal').on('hidden.bs.modal', function () {
+            $('#restart').click()
+            $('#goLogin').click()
+        })
+    } catch(err){}
+
+    try{
+        $('#modalError').modal('show')
+        $('#modalError').on('hidden.bs.modal', function () {
+            $('#restart').click()
+            $('#goLogin').click()
+        })
+    } catch(err){}
 }
 
 function body_message(msg) {
-    //require('nw.gui').Window.get().showDevTools();
     setPage('<h1>' + msg + '</h1>');
 }
 
@@ -153,5 +166,5 @@ function avoid_reload() {
 
 avoid_reload();
 start_process();
-//require('nw.gui').Window.get().maximize();
-require('nw.gui').Window.get().showDevTools()
+require('nw.gui').Window.get().maximize();
+//require('nw.gui').Window.get().showDevTools()

@@ -887,6 +887,7 @@ func middlewareAuth(next http.Handler) http.Handler {
 func main() {
 	contraseñamaestra, err := getMasterKey(rutaMasterKey)
 	if err == nil && contraseñamaestra != "" {
+		fmt.Println("Iniciando servidor...")
 		rand.Seed(time.Now().UTC().UnixNano()) //para que el aleatorio funcione bien
 		createDirIfNotExist(rutaArchivos)
 		createDirIfNotExist(rutaCertificados)
@@ -896,6 +897,7 @@ func main() {
 		f, err := os.OpenFile(rutaLog, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
 			log.Fatalf("Error abriendo el fichero: %v", err)
+			fmt.Printf("Error abriendo el fichero: %v", err)
 		}
 		defer f.Close()
 		log.SetOutput(f)
@@ -910,6 +912,7 @@ func main() {
 			cifrarCarpeta(rutaCertificados)
 			if err != nil {
 				log.Fatal("Error: No se han podido crear los certificados https.")
+				fmt.Println("Error: No se han podido crear los certificados https.")
 			}
 		}
 
@@ -957,19 +960,23 @@ func main() {
 		err = json.Unmarshal(bytesDescifrados, &blocks)
 		check(err)
 
-		log.Println("Descifrando certificados https...")
+		log.Println("Descifrando certificados HTTPS...")
 		descifrarCarpeta(rutaCertificados)
 
 		go func() {
 			log.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
+			fmt.Println("Poniendo en marcha servidor HTTPS, escuchando puerto 8081")
 			if err := srv.ListenAndServeTLS(rutaCertificados+"/cert.pem", rutaCertificados+"/key.pem"); err != nil {
 				log.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
+				fmt.Printf("Error al poner en funcionamiento el servidor TLS: %s\n", err)
 			}
 		}()
 		go func() {
 			log.Println("Poniendo en marcha redireccionamiento HTTP->HTTPS, escuchando puerto 8080")
+			fmt.Println("Poniendo en marcha redireccionamiento HTTP->HTTPS, escuchando puerto 8080")
 			if err := http.ListenAndServe(":8080", http.HandlerFunc(redirectToHTTPS)); err != nil {
-				log.Printf("Error al redireccionar http a https: %s\n", err)
+				log.Printf("Error al redireccionar HTTP a HTTPS: %s\n", err)
+				fmt.Printf("Error al redireccionar HTTP a HTTPS: %s\n", err)
 			}
 		}()
 
@@ -994,7 +1001,8 @@ func main() {
 		cifrarCarpeta(rutaCertificados)
 
 		log.Println("Servidor detenido correctamente")
+		fmt.Println("Servidor detenido correctamente")
 	} else {
-		log.Println("El servidor necesita una master.key para iniciar")
+		fmt.Println("El servidor necesita una master.key para iniciar")
 	}
 }

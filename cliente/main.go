@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/dtylman/gowd"
@@ -27,6 +28,7 @@ type resp struct {
 
 func main() {
 	body = bootstrap.NewElement("div", "wrapper")
+	body.AddHTML(`<button id="restart" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
 	logo := `<div style="margin:0 auto;width:30%;"><img src="assets/img/logo_alargado.png" style="width:100%;margin:0 auto"/></div>`
 
 	switch mostrar {
@@ -37,6 +39,10 @@ func main() {
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendLogin)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
+		element := body.Find("restart")
+		if element != nil {
+			element.OnEvent(gowd.OnClick, goLogin)
+		}
 		break
 	case "register":
 		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
@@ -45,6 +51,10 @@ func main() {
 		body.Find("register-submit").OnEvent(gowd.OnClick, sendRegister)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
+		element := body.Find("restart")
+		if element != nil {
+			element.OnEvent(gowd.OnClick, goRegister)
+		}
 		break
 	case "principal":
 		body.SetAttribute("style", "background-color:#ecf0f5; height: 100%")
@@ -55,6 +65,10 @@ func main() {
 		body.Find("buttonPedir").OnEvent(gowd.OnClick, pedirFichero)
 		body.Find("buttonEliminar").OnEvent(gowd.OnClick, eliminarFichero)
 		body.Find("ajustes").OnEvent(gowd.OnClick, goAjustes)
+		element := body.Find("restart")
+		if element != nil {
+			element.OnEvent(gowd.OnClick, goPrincipal)
+		}
 		break
 	case "doblefactor":
 		body.SetAttribute("style", "background-color:#FF654E; height: 100%")
@@ -63,6 +77,10 @@ func main() {
 		body.Find("login-submit").OnEvent(gowd.OnClick, sendDobleFactor)
 		body.Find("register-form-link").OnEvent(gowd.OnClick, goRegister)
 		body.Find("login-form-link").OnEvent(gowd.OnClick, goLogin)
+		element := body.Find("restart")
+		if element != nil {
+			element.OnEvent(gowd.OnClick, goLogin)
+		}
 		break
 	case "ajustes":
 		body.SetAttribute("style", "background-color:#ecf0f5; height: 100%")
@@ -71,6 +89,10 @@ func main() {
 		body.Find("recargar").OnEvent(gowd.OnClick, goPrincipal)
 		body.Find("logout-link").OnEvent(gowd.OnClick, goLogin)
 		body.Find("ajustes").OnEvent(gowd.OnClick, goAjustes)
+		element := body.Find("restart")
+		if element != nil {
+			element.OnEvent(gowd.OnClick, goAjustes)
+		}
 		actualizarAjustes()
 		break
 	}
@@ -102,7 +124,6 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 		err = json.Unmarshal(buf.Bytes(), &respuesta)
 		check(err)
 
-		body.Find("texto").SetText(buf.String())
 		if err == nil && respuesta.Ok == true {
 			if respuesta.Msg == "Doble factor" {
 				login = usuario
@@ -113,9 +134,13 @@ func sendLogin(sender *gowd.Element, event *gowd.EventElement) {
 				token = response.Header.Get("Token")
 				goPrincipal(nil, nil)
 			}
+		} else if err == nil {
+			modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuesta.Msg+"</p>")
+		} else {
+			modalError("Error desconocido", "Ha ocurrido un problema con el servidor.")
 		}
 	} else {
-		body.Find("texto").SetText("Faltan datos por rellenar")
+		modalError("Error", "Faltan datos por rellenar")
 	}
 }
 
@@ -140,15 +165,25 @@ func sendRegister(sender *gowd.Element, event *gowd.EventElement) {
 			response := sendServerPetition("POST", reader, "/register", "application/json")
 			defer response.Body.Close()
 
-			s := streamToString(response.Body)
-			body.Find("texto").SetText(s)
-			body.Find("login-form-link").RemoveAttribute("active")
-			body.Find("register-form-link").SetClass("active")
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(response.Body)
+
+			var respuesta resp
+			err = json.Unmarshal(buf.Bytes(), &respuesta)
+			check(err)
+
+			if err == nil && respuesta.Ok == true {
+				modalNormal("Registrado correctamente", "El usuario '"+usuario+"' ha sido registrado correctamente.")
+			} else if err == nil {
+				modalError("Problema al registrar", "Ha ocurrido un problema al registrar: <p>"+respuesta.Msg+"</p>")
+			} else {
+				modalError("Error desconocido", "Ha ocurrido un problema con el servidor.")
+			}
 		} else {
-			body.Find("texto").SetText("Las contraseñas no coinciden")
+			modalError("Error", "Las contraseñas no coinciden")
 		}
 	} else {
-		body.Find("texto").SetText("Faltan datos por rellenar")
+		modalError("Error", "Faltan datos por rellenar")
 	}
 }
 
@@ -157,7 +192,6 @@ func seleccionarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	ruta := body.Find("route").GetValue()
 	filename := body.Find("filename").GetValue()
 	enviarFichero(ruta, encodeURLB64(filename))
-	goPrincipal(nil, nil)
 }
 
 func enviarFichero(ruta string, filename string) {
@@ -191,7 +225,7 @@ func enviarFichero(ruta string, filename string) {
 			enviarParteFichero(contador, bytes, bytesLeidos, filename)
 		}
 	}
-	body.Find("texto").SetText(texto)
+	modalNormal("Fichero subido correctamente", "El fichero ha sido enviado correctamente.")
 }
 
 func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
@@ -210,8 +244,7 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 	check(err)
 	reader := bytes.NewReader(bytesJSON)
 
-	imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash) + " size: " + size + " user: " + login + " filename: " + filename
-	body.Find("texto1").SetText(imprimir)
+	//imprimir := "Pieza: " + contador + " hash: " + hex.EncodeToString(hash) + " size: " + size + " user: " + login + " filename: " + filename
 
 	/**************************** conseguir usuario *************************/
 	response := sendServerPetition("POST", reader, "/checkhash", "application/json")
@@ -224,8 +257,13 @@ func enviarParteFichero(cont int, parte []byte, tam int, filename string) {
 	check(err)
 
 	if err != nil || (respuesta.Ok == false && respuesta.Msg != "Hash comprobado") {
-		goLogin(nil, nil)
-		//mostrar error y si es posible que esta funcion devuelva un error y el bucle de arriba pare
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuesta.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 	} else if respuesta.Ok == false && respuesta.Msg == "Hash comprobado" { //el hash no existe en el servidor (la parte no se ha subido nunca)
 		enviarDatos(parte, filename, contador, hex.EncodeToString(hash), size)
 	}
@@ -258,7 +296,8 @@ func enviarDatos(data []byte, filename string, parte string, hash string, size s
 }
 
 func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
-	filename := encodeURLB64(body.Find("archivoPedido").GetValue())
+	fichero := body.Find("archivoPedido").GetValue()
+	filename := encodeURLB64(fichero)
 	response := sendServerPetition("GET", nil, "/user/"+login+"/file/"+filename, "application/json")
 	defer response.Body.Close()
 
@@ -267,16 +306,28 @@ func pedirFichero(sender *gowd.Element, event *gowd.EventElement) {
 	var respuestaJSON resp
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
-		//Cerrar sesion
-		goLogin(nil, nil)
-		body.Find("texto").SetText(respuestaJSON.Msg)
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuestaJSON.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 	} else {
 		respuesta := buf.String()
-		//fmt.Printf("%s\n", string(contents))
-		createDirIfNotExist("./descargas/" + login)
-		createFile("./descargas/" + login + "/" + body.Find("archivoPedido").GetValue())
-		writeFile("./descargas/"+login+"/"+body.Find("archivoPedido").GetValue(), respuesta)
-		body.Find("texto").SetText("Fichero en descargas: " + body.Find("archivoPedido").GetValue())
+		ex, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		exPath := filepath.Dir(ex)
+
+		descargas := "." + string(os.PathSeparator) + "descargas" + string(os.PathSeparator)
+
+		createDirIfNotExist(descargas + login)
+		createFile(descargas + login + string(os.PathSeparator) + fichero)
+		writeFile(descargas+login+string(os.PathSeparator)+fichero, respuesta)
+		modalNormal("Fichero descargado", "El fichero '"+fichero+"' ha sido descargado correctamente en: <p>"+
+			exPath+string(os.PathSeparator)+"descargas"+string(os.PathSeparator)+login+string(os.PathSeparator)+"</p>")
 	}
 }
 
@@ -290,11 +341,23 @@ func peticionNombreFicheros() string {
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	respuesta := ""
 
-	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
-		//Cerrar sesion
-		//return respuestaJSON.Msg
-		//goLogin(nil, nil)
+	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" && respuestaJSON.Msg != "No tienes ficheros subidos" {
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuestaJSON.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 		return respuesta
+	} else if err != nil {
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 	}
 
 	type FilesJSON struct {
@@ -305,14 +368,6 @@ func peticionNombreFicheros() string {
 	err = json.Unmarshal(buf.Bytes(), &filesJSON)
 	if err == nil && len(filesJSON.Filename) != 0 && len(filesJSON.Size) != 0 && len(filesJSON.Filename) == len(filesJSON.Size) {
 		for i := range filesJSON.Filename {
-			//respuesta += filesJSON.Filename[i] + filesJSON.Size[i]
-			/*<div class="dropdown">
-				<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">` + decodeURLB64(filesJSON.Filename[i]) + `</a>
-				<ul class="dropdown-menu dropdown-menu-files" style="background-color: #53A3CD;">
-					<li><a href="#" onclick="seleccionarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">Descargar</a></li>
-					<li><a href="#" onclick="eliminarArchivo('` + decodeURLB64(filesJSON.Filename[i]) + `')">Eliminar</a></li>
-				</ul>
-			</div>*/
 			tamanyo, _ := strconv.Atoi(filesJSON.Size[i])
 			respuesta += `<tr>
 				<td>
@@ -341,7 +396,6 @@ func peticionNombreFicheros() string {
 
 func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	filename := encodeURLB64(body.Find("archivoEliminar").GetValue())
-	body.Find("texto").SetText("Eliminando: " + decodeURLB64(filename))
 	response := sendServerPetition("DELETE", nil, "/user/"+login+"/file/"+filename, "application/json")
 	defer response.Body.Close()
 
@@ -350,11 +404,15 @@ func eliminarFichero(sender *gowd.Element, event *gowd.EventElement) {
 	var respuestaJSON resp
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
-		//Cerrar sesion
-		goLogin(nil, nil)
-		body.Find("texto").SetText(respuestaJSON.Msg)
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuestaJSON.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 	} else {
-		goPrincipal(nil, nil)
+		modalNormal("Eliminando fichero", "Se ha eliminado el fichero '"+decodeURLB64(filename)+"' correctamente.")
 	}
 }
 
@@ -382,13 +440,16 @@ func sendDobleFactor(sender *gowd.Element, event *gowd.EventElement) {
 		err = json.Unmarshal(buf.Bytes(), &respuesta)
 		check(err)
 
-		body.Find("texto").SetText(buf.String())
 		if err == nil && respuesta.Ok == true {
 			token = response.Header.Get("Token")
 			goPrincipal(nil, nil)
+		} else if err != nil {
+			modalError("Error desconocido", "Ha ocurrido un problema con el servidor.")
+		} else {
+			modalError("Error con el código", "Ha ocurrido un problema con el código.<p>"+respuesta.Msg+"</p>")
 		}
 	} else {
-		body.Find("texto").SetText("Introduce algún código")
+		modalError("Error", "Introduce algún código")
 	}
 }
 
@@ -402,9 +463,13 @@ func actualizarAjustes() {
 	err := json.Unmarshal(buf.Bytes(), &respuestaJSON)
 
 	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
-		//Cerrar sesion
-		//goLogin(nil, nil)
-		body.Find("texto").SetText(respuestaJSON.Msg)
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuestaJSON.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 	}
 
 	type AjustesJSON struct {
@@ -445,15 +510,29 @@ func sendAjustes(sender *gowd.Element, event *gowd.EventElement) {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(response.Body)
 
-	var respuesta resp
-	err = json.Unmarshal(buf.Bytes(), &respuesta)
+	var respuestaJSON resp
+	err = json.Unmarshal(buf.Bytes(), &respuestaJSON)
 	check(err)
 
-	body.Find("texto").SetText(buf.String())
-	if err == nil && respuesta.Ok == true {
-		//ajustes editados correctamente
-	} else {
+	if err == nil && respuestaJSON.Ok == true {
+		modalNormal("Ajustes editados", "Los ajustes han sido editados correctamente.")
+	} else if err == nil && respuestaJSON.Msg != "" {
 		//error al editar los ajustes
+		modalError("Error al editar ajustes", "Ha ocurrido un problema con el servidor.<p>"+respuestaJSON.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
+	} else {
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 	}
 }
 
@@ -468,9 +547,13 @@ func getInfo() string {
 	respuesta := ""
 
 	if err == nil && respuestaJSON.Ok == false && respuestaJSON.Msg != "" {
-		//Cerrar sesion
-		//return respuestaJSON.Msg
-		//goLogin(nil, nil)
+		modalError("Error desconocido", "Ha ocurrido un problema con el servidor.<p>"+respuestaJSON.Msg+"</p>")
+		element := body.Find("restart")
+		if element != nil {
+			body.RemoveElement(element)
+		}
+		body.AddHTML(`<button id="goLogin" type="button" class="btn btn-primary" style="display: none;"/>`, nil)
+		body.Find("goLogin").OnEvent(gowd.OnClick, goLogin)
 		return respuesta
 	}
 
