@@ -38,8 +38,7 @@ func vistaLogin() string {
 				</div>
 			</div>
 		</div>
-	</div>
-	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
+	</div>`
 }
 
 func vistaRegister() string {
@@ -84,8 +83,7 @@ func vistaRegister() string {
 				</div>
 			</div>
 		</div>
-	</div>
-	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
+	</div>`
 }
 
 func vistaPrincipal() string {
@@ -116,7 +114,7 @@ func vistaPrincipal() string {
 		</div>
 	</nav></header>
 	<div class="content-wrapper" style="min-height:unset;">
-		<p style="margin-left: 15px;" id="texto"/><p style="margin-left: 15px;" id="texto1"/><p style="margin-left: 15px;" id="texto2"/>
+		</br>
 		<div class="row" style="margin: 0 auto;">
 			<div class="col-sm-3 col-md-3">
 				<div class="row">
@@ -220,8 +218,7 @@ func vistaFactor() string {
 				</div>
 			</div>
 		</div>
-	</div>
-	<p id="texto"/><p id="texto1"/><p id="texto2"/>`
+	</div>`
 }
 
 func vistaAjustes() string {
@@ -253,7 +250,6 @@ func vistaAjustes() string {
 	</nav></header>
 	<div class="content-wrapper" style="min-height:unset;">
 		</br>
-		<p style="margin-left: 15px;" id="texto"/><p style="margin-left: 15px;" id="texto1"/><p style="margin-left: 15px;" id="texto2"/>
 		<div class="row" style="margin: 0 auto;">
 			<div class="col-sm-3 col-md-3">
 			</div>
@@ -293,6 +289,68 @@ func vistaAjustes() string {
 			<strong>Copyright © 2018&nbsp;<a href="#" style="color:#FF654E"> Gintónico </a>.</strong>&nbsp;&nbsp;&nbsp;Todos los derechos reservados.
 		</div>
 	</footer>`
+}
+
+func modalNormal(titulo string, contenido string) {
+	element := body.Find("modal")
+	if element != nil {
+		body.RemoveElement(element)
+	}
+	body.AddHTML(`<div id="modal"><!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalNormal" style="display: none;">
+        Lanzar modal normal
+    </button>
+
+    <!-- Modal -->
+    <div class="modal fade" id="modalNormal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true" style="color: white;">×</span>
+					</button>
+                    <h5 class="modal-title" id="modalNormalTitulo">`+titulo+`</h5>
+                </div>
+                <div class="modal-body">
+                    <p id="textoModal">`+contenido+`</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Entendido!</button>
+                </div>
+            </div>
+        </div>
+    </div></div>`, nil)
+}
+
+func modalError(titulo string, contenido string) {
+	element := body.Find("modal")
+	if element != nil {
+		body.RemoveElement(element)
+	}
+	body.AddHTML(`<div id="modal"><!-- Button trigger modal -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalError" style="display: none;">
+        Lanzar modal error
+    </button>
+
+    <!-- Modal -->
+    <div class="modal modal-danger fade" id="modalError" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true" style="color: white;">×</span>
+					</button>
+                    <h5 class="modal-title" id="modalErrorTitulo">`+titulo+`</h5>
+                </div>
+                <div class="modal-body">
+                    <p id="textoModal">`+contenido+`</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="entendido" type="button" class="btn btn-outline" data-dismiss="modal">Entendido!</button>
+                </div>
+            </div>
+        </div>
+    </div></div>`, nil)
 }
 
 func goLogin(sender *gowd.Element, event *gowd.EventElement) {

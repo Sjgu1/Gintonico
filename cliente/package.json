@@ -7,10 +7,11 @@
     "width": 1280,
     "height": 720,
     "frame": true,
-    "toolbar": true
+    "toolbar": true,
+    "icon": "assets/img/logo_icon.png"
   },
   "webkit": {
     "plugin": true
   },
-  "version": "0.1.0"
+  "version": "1.0.0"
 }
